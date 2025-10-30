@@ -6,10 +6,10 @@ import java.sql.Timestamp;
  * 问题实体类，对应 questions 表
  */
 public class Question {
-    private Long id;
-    private String questionText;
+    private Long id; //主键
+    private String questionText;//问题内容
     private String category;  // preset 或 custom
-    private Long createdBy;
+    private Long createdBy; //创建时间
     private Boolean isActive;
     private Integer orderIndex;
     private Timestamp createdAt;
