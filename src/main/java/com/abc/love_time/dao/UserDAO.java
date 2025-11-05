@@ -14,7 +14,7 @@ public class UserDAO {
 
     /**
      * 根据code查询用户
-     * @param code 用户code
+     * @param code 用户code（邀请码）
      * @return User对象，如果不存在返回null
      */
     public User findByCode(String code) {
@@ -39,19 +39,52 @@ public class UserDAO {
     }
 
     /**
+     * 根据openid查询用户
+     * @param openid 用户openid
+     * @return User对象，如果不存在返回null
+     */
+    public User findByOpenId(String openid) {
+        String sql = "SELECT * FROM users WHERE openid = ?";
+        
+        try (Connection conn = DBUtil.getConnection();
+             PreparedStatement pstmt = conn.prepareStatement(sql)) {
+            
+            pstmt.setString(1, openid);
+            
+            try (ResultSet rs = pstmt.executeQuery()) {
+                if (rs.next()) {
+                    return mapResultSetToUser(rs);
+                }
+            }
+        } catch (SQLException e) {
+            System.err.println("[UserDAO] 根据openid查询用户失败: " + e.getMessage());
+            e.printStackTrace();
+        }
+        
+        return null;
+    }
+
+    /**
      * 插入新用户
      * @param user 用户对象
      * @return 插入成功返回自增ID，失败返回-1
      */
     public long insert(User user) {
-        String sql = "INSERT INTO users (code, nickName, avatarUrl, created_at) VALUES (?, ?, ?, NOW())";
+        String sql = "INSERT INTO users (openid, code, nickName, avatarUrl, created_at) VALUES (?, ?, ?, ?, NOW())";
         
         try (Connection conn = DBUtil.getConnection();
              PreparedStatement pstmt = conn.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS)) {
             
-            pstmt.setString(1, user.getCode());
-            pstmt.setString(2, user.getNickName());
-            pstmt.setString(3, user.getAvatarUrl());
+            // 确保 openid 不为空
+            if (user.getOpenid() == null || user.getOpenid().trim().isEmpty()) {
+                System.err.println("[UserDAO] openid 不能为空");
+                return -1;
+            }
+            
+            pstmt.setString(1, user.getOpenid());
+            pstmt.setString(2, user.getCode());
+            pstmt.setString(3, user.getNickName());
+            pstmt.setString(4, user.getAvatarUrl());
             
             int affectedRows = pstmt.executeUpdate();
             
@@ -78,7 +111,7 @@ public class UserDAO {
      * @return 更新成功返回true
      */
     public boolean update(User user) {
-        String sql = "UPDATE users SET nickName = ?, avatarUrl = ? WHERE code = ?";
+        String sql = "UPDATE users SET nickName = ?, avatarUrl = ?, code = ? WHERE id = ?";
         
         try (Connection conn = DBUtil.getConnection();
              PreparedStatement pstmt = conn.prepareStatement(sql)) {
@@ -86,6 +119,7 @@ public class UserDAO {
             pstmt.setString(1, user.getNickName());
             pstmt.setString(2, user.getAvatarUrl());
             pstmt.setString(3, user.getCode());
+            pstmt.setLong(4, user.getId());
             
             int affectedRows = pstmt.executeUpdate();
             System.out.println("[UserDAO] 更新用户，影响行数: " + affectedRows);
@@ -123,6 +157,32 @@ public class UserDAO {
     }
 
     /**
+     * 根据ID查询用户
+     * @param id 用户ID
+     * @return User对象，如果不存在返回null
+     */
+    public User findById(Long id) {
+        String sql = "SELECT * FROM users WHERE id = ?";
+        
+        try (Connection conn = DBUtil.getConnection();
+             PreparedStatement pstmt = conn.prepareStatement(sql)) {
+            
+            pstmt.setLong(1, id);
+            
+            try (ResultSet rs = pstmt.executeQuery()) {
+                if (rs.next()) {
+                    return mapResultSetToUser(rs);
+                }
+            }
+        } catch (SQLException e) {
+            System.err.println("[UserDAO] 根据ID查询用户失败: " + e.getMessage());
+            e.printStackTrace();
+        }
+        
+        return null;
+    }
+
+    /**
      * 查询所有用户
      * @return 用户列表
      */
@@ -153,6 +213,7 @@ public class UserDAO {
     private User mapResultSetToUser(ResultSet rs) throws SQLException {
         User user = new User();
         user.setId(rs.getLong("id"));
+        user.setOpenid(rs.getString("openid"));
         user.setCode(rs.getString("code"));
         user.setNickName(rs.getString("nickName"));
         user.setAvatarUrl(rs.getString("avatarUrl"));

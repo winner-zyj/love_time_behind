@@ -3,4 +3,21 @@
          xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
          xsi:schemaLocation="https://jakarta.ee/xml/ns/jakartaee https://jakarta.ee/xml/ns/jakartaee/web-app_6_0.xsd"
          version="6.0">
+    <servlet>
+        <servlet-name>HeartWallServlet</servlet-name>
+        <servlet-class>com.abc.love_time.servlet.HeartWallServlet</servlet-class>
+    </servlet>
+    <servlet-mapping>
+        <servlet-name>HeartWallServlet</servlet-name>
+        <url-pattern>/api/heart-wall/*</url-pattern>
+    </servlet-mapping>
+    
+    <servlet>
+        <servlet-name>CoupleServlet</servlet-name>
+        <servlet-class>com.abc.love_time.servlet.CoupleServlet</servlet-class>
+    </servlet>
+    <servlet-mapping>
+        <servlet-name>CoupleServlet</servlet-name>
+        <url-pattern>/api/couple/*</url-pattern>
+    </servlet-mapping>
 </web-app>

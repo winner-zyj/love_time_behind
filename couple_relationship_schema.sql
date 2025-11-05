@@ -8,7 +8,24 @@
 USE lovetime;
 
 -- ============================================
--- 1. 情侣关系表 (couple_relationships)
+-- 1. 用户表 (users)
+-- 用途：存储用户基本信息
+-- ============================================
+CREATE TABLE IF NOT EXISTS users (
+    id BIGINT PRIMARY KEY AUTO_INCREMENT COMMENT '用户ID',
+    openid VARCHAR(100) NOT NULL UNIQUE COMMENT '微信openid',
+    code VARCHAR(10) COMMENT '邀请码',
+    nickName VARCHAR(100) COMMENT '昵称',
+    avatarUrl VARCHAR(500) COMMENT '头像URL',
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+    
+    -- 索引
+    INDEX idx_openid (openid),
+    INDEX idx_code (code)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='用户表';
+
+-- ============================================
+-- 2. 情侣关系表 (couple_relationships)
 -- 用途：存储情侣绑定关系，确保一个用户只能与一个人绑定
 -- ============================================
 CREATE TABLE IF NOT EXISTS couple_relationships (
@@ -28,10 +45,10 @@ CREATE TABLE IF NOT EXISTS couple_relationships (
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
     
     -- 外键约束
-    CONSTRAINT fk_couple_user1 FOREIGN KEY (user1_id) REFERENCES users(id) ON DELETE CASCADE,
-    CONSTRAINT fk_couple_user2 FOREIGN KEY (user2_id) REFERENCES users(id) ON DELETE CASCADE,
-    CONSTRAINT fk_couple_initiator FOREIGN KEY (initiator_id) REFERENCES users(id) ON DELETE CASCADE,
-    CONSTRAINT fk_couple_receiver FOREIGN KEY (receiver_id) REFERENCES users(id) ON DELETE CASCADE,
+    CONSTRAINT fk_couple_relationships_user1 FOREIGN KEY (user1_id) REFERENCES users(id) ON DELETE CASCADE,
+    CONSTRAINT fk_couple_relationships_user2 FOREIGN KEY (user2_id) REFERENCES users(id) ON DELETE CASCADE,
+    CONSTRAINT fk_couple_relationships_initiator FOREIGN KEY (initiator_id) REFERENCES users(id) ON DELETE CASCADE,
+    CONSTRAINT fk_couple_relationships_receiver FOREIGN KEY (receiver_id) REFERENCES users(id) ON DELETE CASCADE,
     
     -- 索引
     INDEX idx_user1 (user1_id),
@@ -41,11 +58,11 @@ CREATE TABLE IF NOT EXISTS couple_relationships (
     INDEX idx_receiver (receiver_id),
     
     -- 约束：确保user1_id < user2_id，避免重复关系
-    CONSTRAINT chk_user_order CHECK (user1_id < user2_id)
+    CONSTRAINT chk_couple_relationships_user_order CHECK (user1_id < user2_id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='情侣关系表';
 
 -- ============================================
--- 2. 创建触发器：确保一个用户只能有一个活跃的情侣关系
+-- 3. 创建触发器：确保一个用户只能有一个活跃的情侣关系
 -- ============================================
 DROP TRIGGER IF EXISTS before_couple_insert;
 DROP TRIGGER IF EXISTS before_couple_update;
@@ -135,7 +152,7 @@ END//
 DELIMITER ;
 
 -- ============================================
--- 3. 创建辅助函数：检查用户是否有待处理的请求
+-- 4. 创建辅助函数：检查用户是否有待处理的请求
 -- ============================================
 DROP FUNCTION IF EXISTS has_pending_request;
 
@@ -162,7 +179,7 @@ END//
 DELIMITER ;
 
 -- ============================================
--- 4. 创建视图：方便查询用户的情侣关系
+-- 5. 创建视图：方便查询用户的情侣关系
 -- ============================================
 CREATE OR REPLACE VIEW v_user_couple_relationship AS
 SELECT 
@@ -194,7 +211,7 @@ JOIN users u2 ON cr.user2_id = u2.id
 WHERE cr.status = 'active';
 
 -- ============================================
--- 5. 创建辅助函数：获取用户的伴侣ID
+-- 6. 创建辅助函数：获取用户的伴侣ID
 -- ============================================
 DROP FUNCTION IF EXISTS get_partner_id;
 
@@ -222,7 +239,7 @@ END//
 DELIMITER ;
 
 -- ============================================
--- 6. 创建辅助函数：检查两个用户是否是情侣
+-- 7. 创建辅助函数：检查两个用户是否是情侣
 -- ============================================
 DROP FUNCTION IF EXISTS is_couple;
 
@@ -250,11 +267,12 @@ END//
 DELIMITER ;
 
 -- ============================================
--- 7. 验证数据
+-- 8. 验证数据
 -- ============================================
 
 -- 查看创建的表
 SHOW TABLES LIKE 'couple%';
+SHOW TABLES LIKE 'users';
 
 -- 查看触发器
 SHOW TRIGGERS LIKE 'couple_relationships';
@@ -266,7 +284,7 @@ SHOW PROCEDURE STATUS WHERE Db = 'lovetime' AND Name = 'generate_invite_code';
 SHOW FUNCTION STATUS WHERE Db = 'lovetime';
 
 -- ============================================
--- 8. 测试数据（可选）
+-- 9. 测试数据（可选）
 -- ============================================
 
 -- 测试插入绑定请求（需要先有用户数据）
@@ -290,6 +308,7 @@ SHOW FUNCTION STATUS WHERE Db = 'lovetime';
 -- 执行完成提示
 -- ============================================
 SELECT '✅ 情侣关系数据库初始化完成！' AS status,
+       '已创建 users 表' AS table_info,
        '已创建 couple_relationships 表' AS table_info,
        '已创建触发器确保一对一关系' AS trigger_info,
        '已创建辅助函数和视图' AS function_info;

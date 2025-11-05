@@ -166,6 +166,37 @@ public class AnswerDAO {
     }
 
     /**
+     * 根据问题ID和情侣用户ID获取情侣的答案
+     * @param questionId 问题ID
+     * @param currentUserId 当前用户ID
+     * @return 情侣的答案，如果不存在返回null
+     */
+    public Answer findPartnerAnswerByQuestionId(Long questionId, Long currentUserId) {
+        // 使用数据库函数获取情侣ID
+        String sql = "SELECT a.* FROM answers a " +
+                    "WHERE a.question_id = ? " +
+                    "AND a.user_id = get_partner_id(?)";
+        
+        try (Connection conn = DBUtil.getConnection();
+             PreparedStatement pstmt = conn.prepareStatement(sql)) {
+            
+            pstmt.setLong(1, questionId);
+            pstmt.setLong(2, currentUserId);
+            
+            try (ResultSet rs = pstmt.executeQuery()) {
+                if (rs.next()) {
+                    return mapResultSetToAnswer(rs);
+                }
+            }
+        } catch (SQLException e) {
+            System.err.println("[AnswerDAO] 查询情侣答案失败: " + e.getMessage());
+            e.printStackTrace();
+        }
+        
+        return null;
+    }
+
+    /**
      * 统计用户已回答的问题数
      */
     public int countByUserId(Long userId) {

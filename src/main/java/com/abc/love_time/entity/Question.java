@@ -39,6 +39,33 @@ public class Question {
         this.questionText = questionText;
     }
 
+    // 为了兼容性，添加getText/setText别名方法
+    public String getText() {
+        return questionText;
+    }
+
+    public void setText(String text) {
+        this.questionText = text;
+    }
+
+    // 为了兼容性，添加getType/setType别名方法
+    public String getType() {
+        return category;
+    }
+
+    public void setType(String type) {
+        this.category = type;
+    }
+
+    // 为了兼容性，添加getCreatorId/setCreatorId别名方法
+    public Long getCreatorId() {
+        return createdBy;
+    }
+
+    public void setCreatorId(Long creatorId) {
+        this.createdBy = creatorId;
+    }
+
     public String getCategory() {
         return category;
     }

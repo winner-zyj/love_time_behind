@@ -5,6 +5,7 @@ import io.jsonwebtoken.SignatureAlgorithm;
 import io.jsonwebtoken.security.Keys;
 
 import javax.crypto.SecretKey;
+import java.nio.charset.StandardCharsets;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.Map;
@@ -14,7 +15,7 @@ import java.util.Map;
  */
 public class JwtUtil {
     // 密钥（生产环境应该配置在配置文件中）
-    private static final SecretKey SECRET_KEY = Keys.secretKeyFor(SignatureAlgorithm.HS256);
+    private static final SecretKey SECRET_KEY = Keys.hmacShaKeyFor("love_time_secret_key_2025_special".getBytes(StandardCharsets.UTF_8));
     
     // token有效期：7天
     private static final long EXPIRATION_TIME = 7 * 24 * 60 * 60 * 1000;

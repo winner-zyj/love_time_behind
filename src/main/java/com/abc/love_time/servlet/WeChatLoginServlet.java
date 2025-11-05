@@ -70,20 +70,44 @@ public class WeChatLoginServlet extends HttpServlet {
             WeChatSession weChatSession = WeChatApiClient.getSessionByCode(loginRequest.getCode());
             System.out.println("[微信登录] 微信API调用成功，openid: " + weChatSession.getOpenid());
 
+            // 验证 openid 是否为空
+            if (weChatSession.getOpenid() == null || weChatSession.getOpenid().trim().isEmpty()) {
+                System.out.println("[微信登录] 错误: openid为空");
+                WeChatLoginResponse errorResponse = new WeChatLoginResponse(
+                        false, "获取用户信息失败", null
+                );
+                response.setStatus(HttpServletResponse.SC_INTERNAL_SERVER_ERROR);
+                out.print(gson.toJson(errorResponse));
+                return;
+            }
+
             // 5. 保存或更新用户信息到数据库
             System.out.println("[微信登录] 开始处理用户数据...");
             UserDAO userDAO = new UserDAO();
-            User existingUser = userDAO.findByCode(weChatSession.getOpenid());
+            // 使用openid查找用户
+            User existingUser = userDAO.findByOpenId(weChatSession.getOpenid());
             
             if (existingUser == null) {
-                // 新用户，插入数据库
+                // 新用户，插入数据库，code字段初始化为空
                 User newUser = new User(
-                    weChatSession.getOpenid(),
+                    weChatSession.getOpenid(), // 使用openid作为用户标识
                     loginRequest.getNickName(),
                     loginRequest.getAvatarUrl()
                 );
+                // 新用户code字段为空，等待生成邀请码时再填充
+                newUser.setCode(null);
                 long userId = userDAO.insert(newUser);
+                if (userId <= 0) {
+                    System.out.println("[微信登录] 错误: 创建新用户失败");
+                    WeChatLoginResponse errorResponse = new WeChatLoginResponse(
+                            false, "创建用户失败", null
+                    );
+                    response.setStatus(HttpServletResponse.SC_INTERNAL_SERVER_ERROR);
+                    out.print(gson.toJson(errorResponse));
+                    return;
+                }
                 System.out.println("[微信登录] 新用户创建成功，ID: " + userId);
+                existingUser = newUser;
             } else {
                 // 老用户，更新信息
                 existingUser.setNickName(loginRequest.getNickName());

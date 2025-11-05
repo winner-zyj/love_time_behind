@@ -61,6 +61,13 @@ public class QuestionDAO {
     }
 
     /**
+     * 查询所有问题（包括预设+自定义）
+     */
+    public List<Question> findAllQuestions() {
+        return findAllActive();
+    }
+
+    /**
      * 根据类型查询问题
      * @param category preset 或 custom
      */

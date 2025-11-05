@@ -7,7 +7,8 @@ import java.sql.Timestamp;
  */
 public class User {
     private Long id;
-    private String code;
+    private String openid; // 微信openid
+    private String code;   // 邀请码
     private String nickName;
     private String avatarUrl;
     private Timestamp createdAt;
@@ -15,8 +16,8 @@ public class User {
     public User() {
     }
 
-    public User(String code, String nickName, String avatarUrl) {
-        this.code = code;
+    public User(String openid, String nickName, String avatarUrl) {
+        this.openid = openid;
         this.nickName = nickName;
         this.avatarUrl = avatarUrl;
     }
@@ -27,6 +28,14 @@ public class User {
 
     public void setId(Long id) {
         this.id = id;
+    }
+
+    public String getOpenid() {
+        return openid;
+    }
+
+    public void setOpenid(String openid) {
+        this.openid = openid;
     }
 
     public String getCode() {
@@ -65,6 +74,7 @@ public class User {
     public String toString() {
         return "User{" +
                 "id=" + id +
+                ", openid='" + openid + '\'' +
                 ", code='" + code + '\'' +
                 ", nickName='" + nickName + '\'' +
                 ", avatarUrl='" + avatarUrl + '\'' +
