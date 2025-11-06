@@ -3,6 +3,7 @@ package com.abc.love_time.dto;
 import com.abc.love_time.entity.Trajectory;
 
 import java.util.List;
+import java.util.ArrayList;
 import java.util.Map;
 import java.util.HashMap;
 
@@ -75,6 +76,17 @@ public class TrajectoryResponse {
         result.put("partnerTrajectories", partnerTrajectories);
         
         return TrajectoryResponse.success("获取轨迹点列表成功", result);
+    }
+
+    /**
+     * 创建只包含对方轨迹点的响应
+     */
+    public static TrajectoryResponse createPartnerOnlyResponse(List<Trajectory> partnerTrajectories) {
+        Map<String, Object> result = new HashMap<>();
+        result.put("trajectories", new ArrayList<>()); // 空的用户轨迹列表
+        result.put("partnerTrajectories", partnerTrajectories);
+        
+        return TrajectoryResponse.success("获取对方轨迹点成功", result);
     }
 
     /**

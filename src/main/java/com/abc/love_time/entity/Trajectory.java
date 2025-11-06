@@ -15,6 +15,7 @@ public class Trajectory {
     private String description;
     private String photoUrl;
     private Boolean isShared;
+    private Timestamp visitTime; // 新增的visit_time字段
     private Timestamp createdAt;
     private Timestamp updatedAt;
 
@@ -94,6 +95,14 @@ public class Trajectory {
         this.isShared = isShared;
     }
 
+    public Timestamp getVisitTime() {
+        return visitTime;
+    }
+
+    public void setVisitTime(Timestamp visitTime) {
+        this.visitTime = visitTime;
+    }
+
     public Timestamp getCreatedAt() {
         return createdAt;
     }
@@ -122,6 +131,7 @@ public class Trajectory {
                 ", description='" + description + '\'' +
                 ", photoUrl='" + photoUrl + '\'' +
                 ", isShared=" + isShared +
+                ", visitTime=" + visitTime +
                 ", createdAt=" + createdAt +
                 ", updatedAt=" + updatedAt +
                 '}';

@@ -7,7 +7,6 @@ import com.abc.love_time.dto.TrajectoryRequest;
 import com.abc.love_time.dto.TrajectoryResponse;
 import com.abc.love_time.entity.Trajectory;
 import com.abc.love_time.entity.User;
-import com.abc.love_time.util.DBUtil;
 import com.abc.love_time.util.JwtUtil;
 import com.google.gson.Gson;
 
@@ -19,13 +18,8 @@ import jakarta.servlet.http.HttpServletResponse;
 
 import java.io.IOException;
 import java.io.PrintWriter;
-import java.sql.Connection;
-import java.sql.PreparedStatement;
-import java.sql.ResultSet;
-import java.sql.SQLException;
 import java.util.List;
-import java.util.Map;
-import java.util.HashMap;
+import java.util.ArrayList;
 
 /**
  * 轨迹点Servlet
@@ -50,7 +44,6 @@ public class TrajectoryServlet extends HttpServlet {
 
             // 从token中获取用户code
             String userCode = getUserCodeFromToken(request);
-            System.out.println("[TrajectoryServlet] 从token获取的用户code: " + userCode);
             if (userCode == null) {
                 sendError(response, out, "未登录或token已过期", HttpServletResponse.SC_UNAUTHORIZED);
                 return;
@@ -58,7 +51,6 @@ public class TrajectoryServlet extends HttpServlet {
 
             // 获取用户ID
             Long userId = getUserIdByCode(userCode);
-            System.out.println("[TrajectoryServlet] 获取到的用户ID: " + userId);
             if (userId == null) {
                 sendError(response, out, "用户不存在", HttpServletResponse.SC_NOT_FOUND);
                 return;
@@ -67,9 +59,6 @@ public class TrajectoryServlet extends HttpServlet {
             if (pathInfo != null && pathInfo.equals("/list")) {
                 // 获取轨迹点列表
                 handleGetList(request, response, out, userId);
-            } else if (pathInfo != null && pathInfo.equals("/location/current")) {
-                // 获取双方实时位置
-                handleGetCurrentLocation(request, response, out, userId);
             } else {
                 sendError(response, out, "无效的请求路径", HttpServletResponse.SC_NOT_FOUND);
             }
@@ -97,7 +86,6 @@ public class TrajectoryServlet extends HttpServlet {
 
             // 从token中获取用户code
             String userCode = getUserCodeFromToken(request);
-            System.out.println("[TrajectoryServlet] 从token获取的用户code: " + userCode);
             if (userCode == null) {
                 sendError(response, out, "未登录或token已过期", HttpServletResponse.SC_UNAUTHORIZED);
                 return;
@@ -105,7 +93,6 @@ public class TrajectoryServlet extends HttpServlet {
 
             // 获取用户ID
             Long userId = getUserIdByCode(userCode);
-            System.out.println("[TrajectoryServlet] 获取到的用户ID: " + userId);
             if (userId == null) {
                 sendError(response, out, "用户不存在", HttpServletResponse.SC_NOT_FOUND);
                 return;
@@ -114,9 +101,6 @@ public class TrajectoryServlet extends HttpServlet {
             if (pathInfo != null && pathInfo.equals("/create")) {
                 // 创建轨迹点
                 handleCreate(request, response, out, userId);
-            } else if (pathInfo != null && pathInfo.equals("/location/update")) {
-                // 上传/更新用户位置
-                handleUpdateLocation(request, response, out, userId);
             } else {
                 sendError(response, out, "无效的请求路径", HttpServletResponse.SC_NOT_FOUND);
             }
@@ -226,6 +210,9 @@ public class TrajectoryServlet extends HttpServlet {
         try {
             // 获取查询参数
             String period = request.getParameter("period");
+            String showPartnerOnly = request.getParameter("showPartnerOnly"); // 新增参数，用于控制是否只显示对方轨迹
+            String startDate = request.getParameter("startDate"); // 新增参数，日期筛选开始日期
+            String endDate = request.getParameter("endDate"); // 新增参数，日期筛选结束日期
             int daysBack = 7; // 默认7天
             
             if ("30days".equals(period)) {
@@ -234,21 +221,63 @@ public class TrajectoryServlet extends HttpServlet {
                 daysBack = 365; // 一年
             }
 
-            // 获取用户自己的轨迹点
-            List<Trajectory> userTrajectories = trajectoryDAO.findByUserId(userId, daysBack);
+            List<Trajectory> userTrajectories = new ArrayList<>();
+            List<Trajectory> partnerTrajectories = new ArrayList<>();
             
-            // 获取情侣的共享轨迹点
-            List<Trajectory> partnerTrajectories = List.of();
+            // 获取情侣ID
             Long partnerId = coupleDAO.getPartnerId(userId);
-            if (partnerId != null) {
-                partnerTrajectories = trajectoryDAO.findSharedByPartnerId(partnerId, daysBack);
-            }
-
-            // 构造响应
-            TrajectoryResponse result = TrajectoryResponse.createListResponse(userTrajectories, partnerTrajectories);
             
-            response.setStatus(HttpServletResponse.SC_OK);
-            out.print(gson.toJson(result));
+            // 如果提供了日期范围参数，则使用日期范围查询
+            if (startDate != null && !startDate.isEmpty() && endDate != null && !endDate.isEmpty()) {
+                if ("true".equals(showPartnerOnly) && partnerId != null) {
+                    // 只获取情侣的所有轨迹点（不仅限于共享的），按日期范围筛选
+                    partnerTrajectories = trajectoryDAO.findAllByPartnerIdAndDateRange(partnerId, startDate, endDate);
+                    // 构造只包含对方轨迹点的响应
+                    TrajectoryResponse result = TrajectoryResponse.createPartnerOnlyResponse(partnerTrajectories);
+                    
+                    response.setStatus(HttpServletResponse.SC_OK);
+                    out.print(gson.toJson(result));
+                } else {
+                    // 获取用户自己的轨迹点，按日期范围筛选
+                    userTrajectories = trajectoryDAO.findByUserIdAndDateRange(userId, startDate, endDate);
+                    
+                    // 获取情侣的共享轨迹点，按日期范围筛选
+                    if (partnerId != null) {
+                        partnerTrajectories = trajectoryDAO.findSharedByPartnerIdAndDateRange(partnerId, startDate, endDate);
+                    }
+
+                    // 构造响应
+                    TrajectoryResponse result = TrajectoryResponse.createListResponse(userTrajectories, partnerTrajectories);
+                    
+                    response.setStatus(HttpServletResponse.SC_OK);
+                    out.print(gson.toJson(result));
+                }
+            } else {
+                // 使用原有的天数回溯查询方式
+                if ("true".equals(showPartnerOnly) && partnerId != null) {
+                    // 只获取情侣的所有轨迹点（不仅限于共享的）
+                    partnerTrajectories = trajectoryDAO.findAllByPartnerId(partnerId, daysBack);
+                    // 构造只包含对方轨迹点的响应
+                    TrajectoryResponse result = TrajectoryResponse.createPartnerOnlyResponse(partnerTrajectories);
+                    
+                    response.setStatus(HttpServletResponse.SC_OK);
+                    out.print(gson.toJson(result));
+                } else {
+                    // 获取用户自己的轨迹点
+                    userTrajectories = trajectoryDAO.findByUserId(userId, daysBack);
+                    
+                    // 获取情侣的共享轨迹点
+                    if (partnerId != null) {
+                        partnerTrajectories = trajectoryDAO.findSharedByPartnerId(partnerId, daysBack);
+                    }
+
+                    // 构造响应
+                    TrajectoryResponse result = TrajectoryResponse.createListResponse(userTrajectories, partnerTrajectories);
+                    
+                    response.setStatus(HttpServletResponse.SC_OK);
+                    out.print(gson.toJson(result));
+                }
+            }
             
             System.out.println("[TrajectoryServlet] 用户 " + userId + " 获取轨迹点列表成功");
 
@@ -405,152 +434,6 @@ public class TrajectoryServlet extends HttpServlet {
     }
 
     /**
-     * 处理上传/更新用户位置
-     */
-    private void handleUpdateLocation(HttpServletRequest request, HttpServletResponse response, PrintWriter out, Long userId) {
-        try {
-            // 解析请求体
-            StringBuilder sb = new StringBuilder();
-            String line;
-            while ((line = request.getReader().readLine()) != null) {
-                sb.append(line);
-            }
-            
-            TrajectoryRequest locationRequest = gson.fromJson(sb.toString(), TrajectoryRequest.class);
-            
-            // 验证请求参数
-            if (locationRequest.getLatitude() == null || locationRequest.getLongitude() == null) {
-                sendError(response, out, "经纬度不能为空", HttpServletResponse.SC_BAD_REQUEST);
-                return;
-            }
-
-            // 创建或更新用户当前位置（使用特殊标记表示这是实时位置）
-            Trajectory currentLocation = new Trajectory();
-            currentLocation.setUserId(userId);
-            currentLocation.setLatitude(locationRequest.getLatitude());
-            currentLocation.setLongitude(locationRequest.getLongitude());
-            currentLocation.setAddress(locationRequest.getAddress());
-            currentLocation.setPlaceName(locationRequest.getPlaceName());
-            currentLocation.setDescription("实时位置"); // 特殊标记
-            currentLocation.setIsShared(true); // 默认共享给情侣
-
-            long locationId = trajectoryDAO.insert(currentLocation);
-            
-            if (locationId > 0) {
-                currentLocation.setId(locationId);
-                TrajectoryResponse result = TrajectoryResponse.createSingleResponse(currentLocation);
-                
-                response.setStatus(HttpServletResponse.SC_OK);
-                out.print(gson.toJson(result));
-                
-                System.out.println("[TrajectoryServlet] 用户 " + userId + " 更新实时位置成功，ID: " + locationId);
-            } else {
-                sendError(response, out, "更新实时位置失败", HttpServletResponse.SC_INTERNAL_SERVER_ERROR);
-            }
-
-        } catch (Exception e) {
-            System.err.println("[TrajectoryServlet] 更新实时位置失败: " + e.getMessage());
-            e.printStackTrace();
-            sendError(response, out, "更新实时位置失败: " + e.getMessage(), HttpServletResponse.SC_INTERNAL_SERVER_ERROR);
-        }
-    }
-
-    /**
-     * 处理获取双方实时位置
-     */
-    private void handleGetCurrentLocation(HttpServletRequest request, HttpServletResponse response, PrintWriter out, Long userId) {
-        try {
-            // 获取用户自己的最新位置
-            Trajectory myLocation = getLatestLocation(userId);
-            
-            // 获取情侣的最新位置
-            Trajectory partnerLocation = null;
-            Long partnerId = coupleDAO.getPartnerId(userId);
-            if (partnerId != null) {
-                partnerLocation = getLatestLocation(partnerId);
-            }
-
-            // 计算双方距离（如果都有位置信息）
-            Double distance = null;
-            if (myLocation != null && partnerLocation != null) {
-                distance = calculateDistance(
-                    myLocation.getLatitude(), myLocation.getLongitude(),
-                    partnerLocation.getLatitude(), partnerLocation.getLongitude()
-                );
-            }
-
-            // 构造响应数据
-            Map<String, Object> locationData = new HashMap<>();
-            locationData.put("myLocation", myLocation);
-            locationData.put("partnerLocation", partnerLocation);
-            locationData.put("distance", distance);
-
-            TrajectoryResponse result = TrajectoryResponse.success("获取实时位置成功", locationData);
-            
-            response.setStatus(HttpServletResponse.SC_OK);
-            out.print(gson.toJson(result));
-            
-            System.out.println("[TrajectoryServlet] 用户 " + userId + " 获取实时位置成功");
-
-        } catch (Exception e) {
-            System.err.println("[TrajectoryServlet] 获取实时位置失败: " + e.getMessage());
-            e.printStackTrace();
-            sendError(response, out, "获取实时位置失败: " + e.getMessage(), HttpServletResponse.SC_INTERNAL_SERVER_ERROR);
-        }
-    }
-
-    /**
-     * 获取用户的最新位置
-     */
-    private Trajectory getLatestLocation(Long userId) {
-        try {
-            // 使用DAO方法获取用户最新的轨迹点作为当前位置
-            return trajectoryDAO.findLatestByUserId(userId);
-        } catch (Exception e) {
-            System.err.println("[TrajectoryServlet] 获取用户最新位置失败: " + e.getMessage());
-            e.printStackTrace();
-        }
-        
-        return null;
-    }
-
-    /**
-     * 将ResultSet映射为Trajectory对象
-     */
-    private Trajectory mapResultSetToTrajectory(ResultSet rs) throws SQLException {
-        Trajectory trajectory = new Trajectory();
-        trajectory.setId(rs.getLong("id"));
-        trajectory.setUserId(rs.getLong("user_id"));
-        trajectory.setLatitude(rs.getDouble("latitude"));
-        trajectory.setLongitude(rs.getDouble("longitude"));
-        trajectory.setAddress(rs.getString("address"));
-        trajectory.setPlaceName(rs.getString("place_name"));
-        trajectory.setDescription(rs.getString("description"));
-        trajectory.setPhotoUrl(rs.getString("photo_url"));
-        trajectory.setIsShared(rs.getBoolean("is_shared"));
-        trajectory.setCreatedAt(rs.getTimestamp("created_at"));
-        trajectory.setUpdatedAt(rs.getTimestamp("updated_at"));
-        return trajectory;
-    }
-
-    /**
-     * 计算两点间的距离（使用Haversine公式）
-     */
-    private double calculateDistance(double lat1, double lon1, double lat2, double lon2) {
-        final int R = 6371; // 地球半径（公里）
-        
-        double latDistance = Math.toRadians(lat2 - lat1);
-        double lonDistance = Math.toRadians(lon2 - lon1);
-        double a = Math.sin(latDistance / 2) * Math.sin(latDistance / 2)
-                + Math.cos(Math.toRadians(lat1)) * Math.cos(Math.toRadians(lat2))
-                * Math.sin(lonDistance / 2) * Math.sin(lonDistance / 2);
-        double c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-        double distance = R * c; // * 1000 convert to meters
-        
-        return distance; // 返回公里
-    }
-
-    /**
      * 从请求头中获取用户code（通过JWT token）
      */
     private String getUserCodeFromToken(HttpServletRequest request) {
@@ -591,18 +474,12 @@ public class TrajectoryServlet extends HttpServlet {
      */
     private Long getUserIdByCode(String userCode) {
         try {
-            System.out.println("[TrajectoryServlet] 尝试根据openid查找用户: " + userCode);
-            // 使用findByOpenId而不是findByCode，因为token中存储的是openid而不是code
-            User user = userDAO.findByOpenId(userCode);
+            User user = userDAO.findByCode(userCode);
             if (user != null) {
-                System.out.println("[TrajectoryServlet] 找到用户，ID: " + user.getId());
                 return user.getId();
-            } else {
-                System.err.println("[TrajectoryServlet] 未找到用户，openid: " + userCode);
             }
         } catch (Exception e) {
             System.err.println("[TrajectoryServlet] 获取用户ID失败: " + e.getMessage());
-            e.printStackTrace();
         }
         return null;
     }

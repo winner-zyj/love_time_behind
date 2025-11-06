@@ -20,4 +20,13 @@
         <servlet-name>CoupleServlet</servlet-name>
         <url-pattern>/api/couple/*</url-pattern>
     </servlet-mapping>
+    
+    <servlet>
+        <servlet-name>FutureLetterServlet</servlet-name>
+        <servlet-class>com.abc.love_time.servlet.FutureLetterServlet</servlet-class>
+    </servlet>
+    <servlet-mapping>
+        <servlet-name>FutureLetterServlet</servlet-name>
+        <url-pattern>/api/future-letter/*</url-pattern>
+    </servlet-mapping>
 </web-app>
