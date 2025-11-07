@@ -11,7 +11,6 @@ import com.abc.love_time.util.JwtUtil;
 import com.google.gson.Gson;
 
 import jakarta.servlet.ServletException;
-import jakarta.servlet.annotation.WebServlet;
 import jakarta.servlet.http.HttpServlet;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
@@ -20,11 +19,12 @@ import java.io.IOException;
 import java.io.PrintWriter;
 import java.util.List;
 import java.util.ArrayList;
+import java.util.Map;
+import java.util.HashMap;
 
 /**
  * 轨迹点Servlet
  */
-@WebServlet(name = "trajectoryServlet", value = "/api/trajectory/*")
 public class TrajectoryServlet extends HttpServlet {
     private final Gson gson = new Gson();
     private final TrajectoryDAO trajectoryDAO = new TrajectoryDAO();
@@ -59,6 +59,9 @@ public class TrajectoryServlet extends HttpServlet {
             if (pathInfo != null && pathInfo.equals("/list")) {
                 // 获取轨迹点列表
                 handleGetList(request, response, out, userId);
+            } else if (pathInfo != null && pathInfo.equals("/location/current")) {
+                // 获取用户当前位置
+                handleGetCurrentLocation(request, response, out, userId);
             } else {
                 sendError(response, out, "无效的请求路径", HttpServletResponse.SC_NOT_FOUND);
             }
@@ -289,6 +292,40 @@ public class TrajectoryServlet extends HttpServlet {
     }
 
     /**
+     * 处理获取用户当前位置
+     */
+    private void handleGetCurrentLocation(HttpServletRequest request, HttpServletResponse response, PrintWriter out, Long userId) {
+        try {
+            // 获取用户自己的最新位置
+            Trajectory userLocation = trajectoryDAO.getLatestLocation(userId);
+            
+            // 获取情侣的最新位置
+            Trajectory partnerLocation = null;
+            Long partnerId = coupleDAO.getPartnerId(userId);
+            if (partnerId != null) {
+                partnerLocation = trajectoryDAO.getPartnerLatestLocation(partnerId);
+            }
+            
+            // 构造响应数据
+            Map<String, Object> responseData = new HashMap<>();
+            responseData.put("userLocation", userLocation);
+            responseData.put("partnerLocation", partnerLocation);
+            
+            TrajectoryResponse result = TrajectoryResponse.success("获取位置信息成功", responseData);
+            
+            response.setStatus(HttpServletResponse.SC_OK);
+            out.print(gson.toJson(result));
+            
+            System.out.println("[TrajectoryServlet] 用户 " + userId + " 获取当前位置成功");
+            
+        } catch (Exception e) {
+            System.err.println("[TrajectoryServlet] 获取当前位置失败: " + e.getMessage());
+            e.printStackTrace();
+            sendError(response, out, "获取当前位置失败: " + e.getMessage(), HttpServletResponse.SC_INTERNAL_SERVER_ERROR);
+        }
+    }
+
+    /**
      * 处理创建轨迹点
      */
     private void handleCreate(HttpServletRequest request, HttpServletResponse response, PrintWriter out, Long userId) {
@@ -474,12 +511,22 @@ public class TrajectoryServlet extends HttpServlet {
      */
     private Long getUserIdByCode(String userCode) {
         try {
-            User user = userDAO.findByCode(userCode);
+            // 首先尝试使用openid查找用户
+            User user = userDAO.findByOpenId(userCode);
             if (user != null) {
                 return user.getId();
             }
+            
+            // 如果使用openid找不到，再尝试使用code查找用户
+            user = userDAO.findByCode(userCode);
+            if (user != null) {
+                return user.getId();
+            }
+            
+            System.err.println("[TrajectoryServlet] 无法找到用户，userCode: " + userCode);
         } catch (Exception e) {
             System.err.println("[TrajectoryServlet] 获取用户ID失败: " + e.getMessage());
+            e.printStackTrace();
         }
         return null;
     }

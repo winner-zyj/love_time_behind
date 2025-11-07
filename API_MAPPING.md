@@ -10,6 +10,7 @@
 | **对方答案** | `/api/qna/partner` | `/api/qna/partner` | QnaServlet | ⚠️ 已实现（返回空数据）|
 | **添加问题** | `/api/qna/question/add` | `/api/qna/question/add` | QnaServlet | ✅ 已实现 |
 | **删除问题** | `/api/qna/question/delete` | `/api/qna/question/delete` | QnaServlet | ✅ 已实现 |
+| **获取相爱天数** | `/api/couple/love-days` | `/api/couple/love-days` | CoupleServlet | ✅ 已实现 |
 
 ---
 
@@ -32,6 +33,10 @@
 4. **删除自定义问题**
    - 请求参数：`questionId`
    - 权限验证：只能删除自己创建的问题
+
+5. **获取相爱天数**
+   - 请求参数：无
+   - 返回格式：包含 `loveDays`, `anniversaryDate`, `relationshipName`
 
 ### ⚠️ 部分功能待实现
 
@@ -101,6 +106,23 @@ Headers: Authorization: Bearer {token}
   question_id: BIGINT,
   answer_text: TEXT,
   user_id: BIGINT
+}
+```
+
+### 相爱天数对象
+```javascript
+// 前端期望格式
+{
+  loveDays: number,      // 相爱天数
+  anniversaryDate: string, // 纪念日日期 (YYYY-MM-DD)
+  relationshipName: string // 关系昵称
+}
+
+// 后端数据库字段
+{
+  love_days: INT,
+  anniversary_date: DATE,
+  relationship_name: VARCHAR(100)
 }
 ```
 
@@ -186,6 +208,13 @@ curl -X POST "http://localhost:8080/lovetime/api/qna/question/delete?userId=1" \
 ```
 **预期结果：** 返回删除成功消息
 
+### 6. 获取相爱天数
+```bash
+curl "http://localhost:8080/lovetime/api/couple/love-days" \
+  -H "Authorization: Bearer {用户token}"
+```
+**预期结果：** 返回相爱天数信息
+
 ---
 
 ## 前端集成检查清单
@@ -198,6 +227,7 @@ curl -X POST "http://localhost:8080/lovetime/api/qna/question/delete?userId=1" \
 - [ ] 测试历史记录获取功能（含分页）
 - [ ] 测试自定义问题添加功能
 - [ ] 测试自定义问题删除功能
+- [ ] 测试获取相爱天数功能
 - [ ] 处理所有错误响应
 - [ ] 验证中文内容显示正常
 
@@ -212,6 +242,11 @@ curl -X POST "http://localhost:8080/lovetime/api/qna/question/delete?userId=1" \
 - ✅ 支持历史记录查询（含分页）
 - ✅ 支持添加/删除自定义问题
 - ⚠️ 对方答案功能返回空数据（待实现情侣关系表）
+
+### v1.1.0 (2025-11-07)
+- ✅ 实现获取相爱天数接口
+- ✅ 支持情侣关系确认时间计算
+- ✅ 支持纪念日和关系昵称显示
 
 ### 计划中功能
 - [ ] 实现情侣关系表

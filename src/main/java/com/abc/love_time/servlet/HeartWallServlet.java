@@ -14,20 +14,35 @@ import com.abc.love_time.util.JwtUtil;
 import com.google.gson.Gson;
 
 import jakarta.servlet.ServletException;
+import jakarta.servlet.annotation.MultipartConfig;
 import jakarta.servlet.http.HttpServlet;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
+import jakarta.servlet.http.Part;
 
+import java.io.File;
 import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Paths;
+import java.nio.file.StandardCopyOption;
 import java.sql.SQLException;
 import java.util.List;
+import java.util.UUID;
 
+@MultipartConfig(
+    fileSizeThreshold = 1024 * 1024 * 2,  // 2MB
+    maxFileSize = 1024 * 1024 * 10,       // 10MB
+    maxRequestSize = 1024 * 1024 * 50     // 50MB
+)
 public class HeartWallServlet extends HttpServlet {
     private final Gson gson = new Gson();
     private HeartWallProjectDAO projectDAO = new HeartWallProjectDAO();
     private HeartWallPhotoDAO photoDAO = new HeartWallPhotoDAO();
     private UserDAO userDAO = new UserDAO();
     private CoupleRelationshipDAO coupleDAO = new CoupleRelationshipDAO(); // 添加情侣关系DAO
+    
+    // 心形墙照片存储目录（相对于webapp根目录）
+    private static final String UPLOAD_DIR = "uploads/heartwall";
 
     @Override
     protected void doPost(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException {
@@ -44,7 +59,16 @@ public class HeartWallServlet extends HttpServlet {
         }
         
         try {
-            String openid = JwtUtil.getOpenidFromToken(token.substring(7));
+            String jwtToken = token.substring(7);
+            // 验证token有效性
+            if (!JwtUtil.validateToken(jwtToken)) {
+                response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
+                HeartWallResponse errorResponse = HeartWallResponse.error("无效的认证令牌");
+                response.getWriter().write(gson.toJson(errorResponse));
+                return;
+            }
+            
+            String openid = JwtUtil.getOpenidFromToken(jwtToken);
             // 在实际应用中，您需要通过openid查询数据库获取用户ID
             // 这里为了简化，我们假设openid就是用户ID
             Long userId = getUserIdByCode(openid); // 使用实际的用户ID获取方法
@@ -85,7 +109,16 @@ public class HeartWallServlet extends HttpServlet {
         }
         
         try {
-            String openid = JwtUtil.getOpenidFromToken(token.substring(7));
+            String jwtToken = token.substring(7);
+            // 验证token有效性
+            if (!JwtUtil.validateToken(jwtToken)) {
+                response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
+                HeartWallResponse errorResponse = HeartWallResponse.error("无效的认证令牌");
+                response.getWriter().write(gson.toJson(errorResponse));
+                return;
+            }
+            
+            String openid = JwtUtil.getOpenidFromToken(jwtToken);
             // 在实际应用中，您需要通过openid查询数据库获取用户ID
             // 这里为了简化，我们假设openid就是用户ID
             Long userId = getUserIdByCode(openid); // 使用实际的用户ID获取方法
@@ -140,7 +173,16 @@ public class HeartWallServlet extends HttpServlet {
         }
         
         try {
-            String openid = JwtUtil.getOpenidFromToken(token.substring(7));
+            String jwtToken = token.substring(7);
+            // 验证token有效性
+            if (!JwtUtil.validateToken(jwtToken)) {
+                response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
+                HeartWallResponse errorResponse = HeartWallResponse.error("无效的认证令牌");
+                response.getWriter().write(gson.toJson(errorResponse));
+                return;
+            }
+            
+            String openid = JwtUtil.getOpenidFromToken(jwtToken);
             // 在实际应用中，您需要通过openid查询数据库获取用户ID
             // 这里为了简化，我们假设openid就是用户ID
             Long userId = getUserIdByCode(openid); // 使用实际的用户ID获取方法
@@ -201,7 +243,16 @@ public class HeartWallServlet extends HttpServlet {
         }
         
         try {
-            String openid = JwtUtil.getOpenidFromToken(token.substring(7));
+            String jwtToken = token.substring(7);
+            // 验证token有效性
+            if (!JwtUtil.validateToken(jwtToken)) {
+                response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
+                HeartWallResponse errorResponse = HeartWallResponse.error("无效的认证令牌");
+                response.getWriter().write(gson.toJson(errorResponse));
+                return;
+            }
+            
+            String openid = JwtUtil.getOpenidFromToken(jwtToken);
             // 在实际应用中，您需要通过openid查询数据库获取用户ID
             // 这里为了简化，我们假设openid就是用户ID
             Long userId = getUserIdByCode(openid); // 使用实际的用户ID获取方法
@@ -217,7 +268,7 @@ public class HeartWallServlet extends HttpServlet {
                 String[] parts = pathInfo.split("/");
                 if (parts.length == 3) {
                     Long projectId = Long.parseLong(parts[2]);
-                    deleteProject(response, projectId, userId);
+                    deleteProject(request, response, projectId, userId);
                 } else {
                     response.setStatus(HttpServletResponse.SC_BAD_REQUEST);
                     HeartWallResponse errorResponse = HeartWallResponse.error("无效的请求路径");
@@ -227,7 +278,7 @@ public class HeartWallServlet extends HttpServlet {
                 String[] parts = pathInfo.split("/");
                 if (parts.length == 3) {
                     Long photoId = Long.parseLong(parts[2]);
-                    deletePhoto(response, photoId, userId);
+                    deletePhoto(request, response, photoId, userId);
                 } else {
                     response.setStatus(HttpServletResponse.SC_BAD_REQUEST);
                     HeartWallResponse errorResponse = HeartWallResponse.error("无效的请求路径");
@@ -269,6 +320,184 @@ public class HeartWallServlet extends HttpServlet {
     }
     
     private void uploadPhoto(HttpServletRequest request, HttpServletResponse response, Long userId) throws IOException, SQLException {
+        try {
+            // 检查是否为multipart请求（文件上传）
+            String contentType = request.getContentType();
+            if (contentType != null && contentType.startsWith("multipart/")) {
+                // 处理文件上传
+                handleFileUpload(request, response, userId);
+            } else {
+                // 处理JSON请求（原有逻辑）
+                handleJsonUpload(request, response, userId);
+            }
+        } catch (Exception e) {
+            handleError(response, e);
+        }
+    }
+    
+    private void handleFileUpload(HttpServletRequest request, HttpServletResponse response, Long userId) throws IOException, SQLException, ServletException {
+        // 获取项目ID参数
+        String projectIdStr = request.getParameter("projectId");
+        if (projectIdStr == null || projectIdStr.isEmpty()) {
+            response.setStatus(HttpServletResponse.SC_BAD_REQUEST);
+            HeartWallResponse errorResponse = HeartWallResponse.error("项目ID不能为空");
+            response.getWriter().write(gson.toJson(errorResponse));
+            return;
+        }
+        
+        Long projectId;
+        try {
+            projectId = Long.parseLong(projectIdStr);
+        } catch (NumberFormatException e) {
+            response.setStatus(HttpServletResponse.SC_BAD_REQUEST);
+            HeartWallResponse errorResponse = HeartWallResponse.error("项目ID格式不正确");
+            response.getWriter().write(gson.toJson(errorResponse));
+            return;
+        }
+        
+        // 检查项目是否存在且属于该用户或其情侣
+        HeartWallProject project = projectDAO.findById(projectId);
+        if (project == null) {
+            response.setStatus(HttpServletResponse.SC_NOT_FOUND);
+            HeartWallResponse errorResponse = HeartWallResponse.error("指定的心形墙项目不存在");
+            response.getWriter().write(gson.toJson(errorResponse));
+            return;
+        }
+        
+        // 检查用户是否有权限在此项目中上传照片（自己或情侣）
+        if (!hasPermissionForProject(project, userId)) {
+            response.setStatus(HttpServletResponse.SC_FORBIDDEN);
+            HeartWallResponse errorResponse = HeartWallResponse.error("您没有权限在此项目中上传照片");
+            response.getWriter().write(gson.toJson(errorResponse));
+            return;
+        }
+        
+        // 检查项目是否已满
+        if (project.getPhotoCount() != null && project.getPhotoCount() >= project.getMaxPhotos()) {
+            response.setStatus(HttpServletResponse.SC_BAD_REQUEST);
+            HeartWallResponse errorResponse = HeartWallResponse.error("该项目已达到最大照片数量限制");
+            response.getWriter().write(gson.toJson(errorResponse));
+            return;
+        }
+        
+        // 获取位置索引参数（可选）
+        String positionIndexStr = request.getParameter("positionIndex");
+        int positionIndex;
+        if (positionIndexStr != null && !positionIndexStr.isEmpty()) {
+            try {
+                positionIndex = Integer.parseInt(positionIndexStr);
+            } catch (NumberFormatException e) {
+                response.setStatus(HttpServletResponse.SC_BAD_REQUEST);
+                HeartWallResponse errorResponse = HeartWallResponse.error("位置索引格式不正确");
+                response.getWriter().write(gson.toJson(errorResponse));
+                return;
+            }
+        } else {
+            // 如果未指定位置，获取下一个可用位置
+            positionIndex = photoDAO.getNextAvailablePosition(project.getId());
+        }
+        
+        if (positionIndex == -1) {
+            response.setStatus(HttpServletResponse.SC_BAD_REQUEST);
+            HeartWallResponse errorResponse = HeartWallResponse.error("没有可用的位置索引");
+            response.getWriter().write(gson.toJson(errorResponse));
+            return;
+        }
+        
+        // 检查位置是否在有效范围内
+        if (positionIndex < 1 || positionIndex > project.getMaxPhotos()) {
+            response.setStatus(HttpServletResponse.SC_BAD_REQUEST);
+            HeartWallResponse errorResponse = HeartWallResponse.error("位置索引超出有效范围");
+            response.getWriter().write(gson.toJson(errorResponse));
+            return;
+        }
+        
+        // 获取上传的文件
+        Part filePart = request.getPart("file");
+        if (filePart == null) {
+            response.setStatus(HttpServletResponse.SC_BAD_REQUEST);
+            HeartWallResponse errorResponse = HeartWallResponse.error("未找到上传的文件");
+            response.getWriter().write(gson.toJson(errorResponse));
+            return;
+        }
+        
+        // 获取原始文件名
+        String fileName = getFileName(filePart);
+        if (fileName == null || fileName.isEmpty()) {
+            response.setStatus(HttpServletResponse.SC_BAD_REQUEST);
+            HeartWallResponse errorResponse = HeartWallResponse.error("文件名无效");
+            response.getWriter().write(gson.toJson(errorResponse));
+            return;
+        }
+        
+        // 验证文件类型
+        String fileContentType = filePart.getContentType();
+        if (!isValidImageType(fileContentType)) {
+            response.setStatus(HttpServletResponse.SC_BAD_REQUEST);
+            HeartWallResponse errorResponse = HeartWallResponse.error("仅支持图片格式（jpg, jpeg, png, gif）");
+            response.getWriter().write(gson.toJson(errorResponse));
+            return;
+        }
+        
+        // 生成唯一文件名
+        String fileExtension = getFileExtension(fileName);
+        String newFileName = UUID.randomUUID().toString() + fileExtension;
+        
+        // 获取上传目录的绝对路径
+        String uploadPath = getServletContext().getRealPath("") + File.separator + UPLOAD_DIR;
+        File uploadDir = new File(uploadPath);
+        if (!uploadDir.exists()) {
+            uploadDir.mkdirs();
+        }
+        
+        // 保存文件
+        String filePath = uploadPath + File.separator + newFileName;
+        Files.copy(filePart.getInputStream(), Paths.get(filePath), StandardCopyOption.REPLACE_EXISTING);
+        
+        // 生成访问URL
+        String photoUrl = request.getScheme() + "://" + 
+                         request.getServerName() + ":" + 
+                         request.getServerPort() + 
+                         request.getContextPath() + "/" + 
+                         UPLOAD_DIR + "/" + newFileName;
+        
+        // 获取照片说明（可选）
+        String caption = request.getParameter("caption");
+        
+        // 获取拍摄日期（可选）
+        String takenDateStr = request.getParameter("takenDate");
+        java.sql.Date takenDate = null;
+        if (takenDateStr != null && !takenDateStr.isEmpty()) {
+            try {
+                takenDate = java.sql.Date.valueOf(takenDateStr);
+            } catch (Exception e) {
+                // 如果日期格式不正确，忽略该参数
+            }
+        }
+        
+        HeartWallPhoto photo = new HeartWallPhoto();
+        photo.setProjectId(projectId);
+        photo.setUserId(userId);
+        photo.setPhotoUrl(photoUrl);
+        photo.setPositionIndex(positionIndex);
+        photo.setCaption(caption);
+        photo.setTakenDate(takenDate);
+        
+        try {
+            photo = photoDAO.insert(photo);
+            // 成功时返回200状态码而不是201
+            response.setStatus(HttpServletResponse.SC_OK);
+            HeartWallResponse successResponse = HeartWallResponse.success("照片上传成功", photo);
+            response.getWriter().write(gson.toJson(successResponse));
+        } catch (SQLException e) {
+            // 出现异常时返回500状态码
+            response.setStatus(HttpServletResponse.SC_INTERNAL_SERVER_ERROR);
+            HeartWallResponse errorResponse = HeartWallResponse.error("服务器内部错误: " + e.getMessage());
+            response.getWriter().write(gson.toJson(errorResponse));
+        }
+    }
+    
+    private void handleJsonUpload(HttpServletRequest request, HttpServletResponse response, Long userId) throws IOException, SQLException {
         HeartWallPhotoRequest photoRequest = gson.fromJson(request.getReader(), HeartWallPhotoRequest.class);
         
         if (photoRequest.getProjectId() == null) {
@@ -346,14 +575,23 @@ public class HeartWallServlet extends HttpServlet {
     }
     
     private void getUserProjects(HttpServletRequest request, HttpServletResponse response, Long userId) throws IOException, SQLException {
-        List<HeartWallProject> projects = projectDAO.findByUserId(userId);
+        // 获取情侣ID
+        Long partnerId = coupleDAO.getPartnerId(userId);
         
-        // 获取每个项目的用户信息
+        // 获取用户自己和情侣的项目
+        List<HeartWallProject> projects = projectDAO.findByUserIdOrPartnerId(userId, partnerId);
+        
+        // 设置每个项目的用户信息和是否属于情侣的标识
         for (HeartWallProject project : projects) {
             User user = userDAO.findById(project.getUserId());
             if (user != null) {
                 project.setUserNickName(user.getNickName());
                 project.setUserAvatarUrl(user.getAvatarUrl());
+            }
+            
+            // 如果项目不属于当前用户，标记为情侣项目
+            if (!project.getUserId().equals(userId)) {
+                project.setIsPartnerProject(true);
             }
         }
         
@@ -583,7 +821,7 @@ public class HeartWallServlet extends HttpServlet {
         }
     }
     
-    private void deleteProject(HttpServletResponse response, Long projectId, Long userId) throws IOException, SQLException {
+    private void deleteProject(HttpServletRequest request, HttpServletResponse response, Long projectId, Long userId) throws IOException, SQLException {
         HeartWallProject project = projectDAO.findById(projectId);
         
         if (project == null) {
@@ -613,7 +851,7 @@ public class HeartWallServlet extends HttpServlet {
         }
     }
     
-    private void deletePhoto(HttpServletResponse response, Long photoId, Long userId) throws IOException, SQLException {
+    private void deletePhoto(HttpServletRequest request, HttpServletResponse response, Long photoId, Long userId) throws IOException, SQLException {
         HeartWallPhoto photo = photoDAO.findById(photoId);
         
         if (photo == null) {
@@ -705,15 +943,27 @@ public class HeartWallServlet extends HttpServlet {
     
     /**
      * 根据用户code获取用户ID
+     * @param userCode 用户code（openid）
+     * @return 用户ID
      */
     private Long getUserIdByCode(String userCode) {
         try {
-            User user = userDAO.findByCode(userCode);
+            // 首先尝试使用openid查找用户
+            User user = userDAO.findByOpenId(userCode);
             if (user != null) {
                 return user.getId();
             }
+            
+            // 如果使用openid找不到，再尝试使用code查找用户
+            user = userDAO.findByCode(userCode);
+            if (user != null) {
+                return user.getId();
+            }
+            
+            System.err.println("[HeartWallServlet] 无法找到用户，userCode: " + userCode);
         } catch (Exception e) {
             System.err.println("[HeartWallServlet] 获取用户ID失败: " + e.getMessage());
+            e.printStackTrace();
         }
         return null;
     }
@@ -738,5 +988,43 @@ public class HeartWallServlet extends HttpServlet {
         }
         
         return false;
+    }
+    
+    /**
+     * 获取上传文件的文件名
+     */
+    private String getFileName(Part part) {
+        String contentDisposition = part.getHeader("content-disposition");
+        if (contentDisposition == null) return null;
+        
+        for (String content : contentDisposition.split(";")) {
+            if (content.trim().startsWith("filename")) {
+                return content.substring(content.indexOf('=') + 1).trim().replace("\"", "");
+            }
+        }
+        return null;
+    }
+    
+    /**
+     * 获取文件扩展名
+     */
+    private String getFileExtension(String fileName) {
+        int lastIndexOf = fileName.lastIndexOf(".");
+        if (lastIndexOf == -1) {
+            return "";
+        }
+        return fileName.substring(lastIndexOf);
+    }
+    
+    /**
+     * 验证是否为有效的图片类型
+     */
+    private boolean isValidImageType(String contentType) {
+        return contentType != null && (
+            contentType.equals("image/jpeg") ||
+            contentType.equals("image/jpg") ||
+            contentType.equals("image/png") ||
+            contentType.equals("image/gif")
+        );
     }
 }

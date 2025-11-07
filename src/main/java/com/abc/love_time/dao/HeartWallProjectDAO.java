@@ -34,6 +34,7 @@ public class HeartWallProjectDAO {
                 try (ResultSet generatedKeys = stmt.getGeneratedKeys()) {
                     if (generatedKeys.next()) {
                         project.setId(generatedKeys.getLong(1));
+                        System.out.println("[HeartWallProjectDAO] 创建心形墙项目成功，ID: " + project.getId() + "，用户ID: " + project.getUserId());
                         return project; // 成功时直接返回
                     } else {
                         throw new SQLException("创建心形墙项目失败，没有获得ID。");
@@ -82,6 +83,49 @@ public class HeartWallProjectDAO {
              PreparedStatement stmt = conn.prepareStatement(sql)) {
             
             stmt.setLong(1, userId);
+            try (ResultSet rs = stmt.executeQuery()) {
+                while (rs.next()) {
+                    projects.add(mapResultSetToProject(rs));
+                }
+            }
+        }
+        return projects;
+    }
+    
+    /**
+     * 获取用户及其情侣的所有项目
+     * @param userId 用户ID
+     * @param partnerId 情侣ID（可为空）
+     * @return 项目列表
+     * @throws SQLException
+     */
+    public List<HeartWallProject> findByUserIdOrPartnerId(Long userId, Long partnerId) throws SQLException {
+        List<HeartWallProject> projects = new ArrayList<>();
+        
+        // 如果没有情侣，只查询用户自己的项目
+        if (partnerId == null) {
+            String sql = "SELECT * FROM heart_wall_projects WHERE user_id = ? ORDER BY created_at DESC";
+            try (Connection conn = DBUtil.getConnection();
+                 PreparedStatement stmt = conn.prepareStatement(sql)) {
+                
+                stmt.setLong(1, userId);
+                try (ResultSet rs = stmt.executeQuery()) {
+                    while (rs.next()) {
+                        projects.add(mapResultSetToProject(rs));
+                    }
+                }
+            }
+            return projects;
+        }
+        
+        // 查询用户自己和情侣的项目
+        String sql = "SELECT * FROM heart_wall_projects WHERE user_id = ? OR user_id = ? ORDER BY created_at DESC";
+        try (Connection conn = DBUtil.getConnection();
+             PreparedStatement stmt = conn.prepareStatement(sql)) {
+            
+            stmt.setLong(1, userId);
+            stmt.setLong(2, partnerId);
+            
             try (ResultSet rs = stmt.executeQuery()) {
                 while (rs.next()) {
                     projects.add(mapResultSetToProject(rs));

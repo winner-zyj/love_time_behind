@@ -4,8 +4,10 @@ import com.abc.love_time.dao.CoupleRelationshipDAO;
 import com.abc.love_time.dao.UserDAO;
 import com.abc.love_time.dto.CoupleRequest;
 import com.abc.love_time.dto.CoupleResponse;
+import com.abc.love_time.dto.LoveDaysResponse;
 import com.abc.love_time.entity.CoupleRelationship;
 import com.abc.love_time.entity.User;
+import com.abc.love_time.service.CoupleService;
 import com.abc.love_time.util.DBUtil;
 import com.abc.love_time.util.JwtUtil;
 import com.google.gson.Gson;
@@ -33,6 +35,7 @@ public class CoupleServlet extends HttpServlet {
     private final Gson gson = new Gson();
     private final CoupleRelationshipDAO coupleDAO = new CoupleRelationshipDAO();
     private final UserDAO userDAO = new UserDAO();
+    private final CoupleService coupleService = new CoupleService();
 
     @Override
     protected void doGet(HttpServletRequest request, HttpServletResponse response) throws IOException {
@@ -64,6 +67,9 @@ public class CoupleServlet extends HttpServlet {
             } else if (pathInfo != null && pathInfo.equals("/status")) {
                 // 查询绑定状态
                 handleGetStatus(request, response, out, userId);
+            } else if (pathInfo != null && pathInfo.equals("/love-days")) {
+                // 获取相爱天数
+                handleGetLoveDays(request, response, out, userId);
             } else {
                 sendError(response, out, "无效的请求路径", HttpServletResponse.SC_NOT_FOUND);
             }
@@ -340,6 +346,9 @@ public class CoupleServlet extends HttpServlet {
             if (relationshipId > 0) {
                 relationship.setId(relationshipId);
                 
+                // 确保confirmed_at字段被正确设置
+                coupleDAO.updateStatus(relationshipId, "active");
+                
                 Map<String, Object> result = new HashMap<>();
                 result.put("success", true);
                 result.put("message", "绑定成功");
@@ -420,6 +429,32 @@ public class CoupleServlet extends HttpServlet {
             
             response.setStatus(HttpServletResponse.SC_INTERNAL_SERVER_ERROR);
             out.print(gson.toJson(result));
+        }
+    }
+
+    /**
+     * 处理获取相爱天数
+     */
+    private void handleGetLoveDays(HttpServletRequest request, HttpServletResponse response, PrintWriter out, Long userId) {
+        try {
+            LoveDaysResponse loveDaysResponse = coupleService.calculateLoveDays(userId);
+            
+            response.setStatus(HttpServletResponse.SC_OK);
+            out.print(gson.toJson(loveDaysResponse));
+            
+            if (loveDaysResponse.isSuccess()) {
+                System.out.println("[CoupleServlet] 用户 " + userId + " 获取相爱天数成功: " + loveDaysResponse.getData().getLoveDays() + "天");
+            } else {
+                System.out.println("[CoupleServlet] 用户 " + userId + " 获取相爱天数失败: " + loveDaysResponse.getMessage());
+            }
+
+        } catch (Exception e) {
+            System.err.println("[CoupleServlet] 获取相爱天数失败: " + e.getMessage());
+            e.printStackTrace();
+            
+            LoveDaysResponse errorResponse = LoveDaysResponse.error("获取相爱天数失败: " + e.getMessage());
+            response.setStatus(HttpServletResponse.SC_INTERNAL_SERVER_ERROR);
+            out.print(gson.toJson(errorResponse));
         }
     }
 

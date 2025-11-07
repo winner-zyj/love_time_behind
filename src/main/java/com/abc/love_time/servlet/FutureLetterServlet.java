@@ -5,6 +5,7 @@ import com.abc.love_time.dao.UserDAO;
 import com.abc.love_time.dao.CoupleRelationshipDAO;
 import com.abc.love_time.dto.FutureLetterRequest;
 import com.abc.love_time.dto.FutureLetterResponse;
+import com.abc.love_time.dto.FutureLetterDetailResponse;
 import com.abc.love_time.entity.FutureLetter;
 import com.abc.love_time.entity.User;
 import com.abc.love_time.util.JwtUtil;
@@ -381,7 +382,27 @@ public class FutureLetterServlet extends HttpServlet {
                 }
             }
 
-            FutureLetterResponse result = FutureLetterResponse.createSingleResponse(letter);
+            // 创建包含透明度和大小信息的详细响应对象
+            FutureLetterDetailResponse detailResponse = new FutureLetterDetailResponse();
+            detailResponse.setId(letter.getId());
+            detailResponse.setSenderId(letter.getSenderId());
+            detailResponse.setReceiverId(letter.getReceiverId());
+            detailResponse.setTitle(letter.getTitle());
+            detailResponse.setContent(letter.getContent());
+            detailResponse.setDeliveryMethod(letter.getDeliveryMethod());
+            detailResponse.setScheduledDate(letter.getScheduledDate() != null ? letter.getScheduledDate().toString() : null);
+            detailResponse.setScheduledTime(letter.getScheduledTime() != null ? letter.getScheduledTime().toString() : null);
+            detailResponse.setCreatedAt(letter.getCreatedAt());
+            detailResponse.setUpdatedAt(letter.getUpdatedAt());
+            detailResponse.setStatus(letter.getStatus());
+            detailResponse.setSentAt(letter.getSentAt());
+            detailResponse.setReadAt(letter.getReadAt());
+            detailResponse.setBackgroundImage(letter.getBackgroundImage());
+            detailResponse.setBackgroundOpacity(letter.getBackgroundOpacity());
+            detailResponse.setBackgroundWidth(letter.getBackgroundWidth());
+            detailResponse.setBackgroundHeight(letter.getBackgroundHeight());
+
+            FutureLetterResponse result = FutureLetterResponse.success("操作成功", detailResponse);
             
             response.setStatus(HttpServletResponse.SC_OK);
             out.print(gson.toJson(result));
@@ -439,6 +460,9 @@ public class FutureLetterServlet extends HttpServlet {
             letter.setScheduledTime(Time.valueOf(letterRequest.getScheduledTime() != null ? letterRequest.getScheduledTime() : "00:00:00"));
             letter.setStatus(letterRequest.getStatus() != null ? letterRequest.getStatus() : "DRAFT");
             letter.setBackgroundImage(letterRequest.getBackgroundImage());
+            letter.setBackgroundOpacity(letterRequest.getBackgroundOpacity());
+            letter.setBackgroundWidth(letterRequest.getBackgroundWidth());
+            letter.setBackgroundHeight(letterRequest.getBackgroundHeight());
 
             long letterId = futureLetterDAO.insert(letter);
             
@@ -503,6 +527,9 @@ public class FutureLetterServlet extends HttpServlet {
             }
             existingLetter.setStatus(letterRequest.getStatus());
             existingLetter.setBackgroundImage(letterRequest.getBackgroundImage());
+            existingLetter.setBackgroundOpacity(letterRequest.getBackgroundOpacity());
+            existingLetter.setBackgroundWidth(letterRequest.getBackgroundWidth());
+            existingLetter.setBackgroundHeight(letterRequest.getBackgroundHeight());
 
             boolean updated = futureLetterDAO.update(existingLetter);
             

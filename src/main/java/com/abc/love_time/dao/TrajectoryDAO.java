@@ -322,6 +322,58 @@ public class TrajectoryDAO {
     }
     
     /**
+     * 获取用户的最新位置
+     * @param userId 用户ID
+     * @return 最新的轨迹点，如果不存在返回null
+     */
+    public Trajectory getLatestLocation(Long userId) {
+        String sql = "SELECT * FROM trajectories WHERE user_id = ? ORDER BY created_at DESC LIMIT 1";
+        
+        try (Connection conn = DBUtil.getConnection();
+             PreparedStatement pstmt = conn.prepareStatement(sql)) {
+            
+            pstmt.setLong(1, userId);
+            
+            try (ResultSet rs = pstmt.executeQuery()) {
+                if (rs.next()) {
+                    return mapResultSetToTrajectory(rs);
+                }
+            }
+        } catch (SQLException e) {
+            System.err.println("[TrajectoryDAO] 获取用户最新位置失败: " + e.getMessage());
+            e.printStackTrace();
+        }
+        
+        return null;
+    }
+    
+    /**
+     * 获取情侣的最新位置
+     * @param partnerId 情侣ID
+     * @return 最新的轨迹点，如果不存在返回null
+     */
+    public Trajectory getPartnerLatestLocation(Long partnerId) {
+        String sql = "SELECT * FROM trajectories WHERE user_id = ? AND is_shared = 1 ORDER BY created_at DESC LIMIT 1";
+        
+        try (Connection conn = DBUtil.getConnection();
+             PreparedStatement pstmt = conn.prepareStatement(sql)) {
+            
+            pstmt.setLong(1, partnerId);
+            
+            try (ResultSet rs = pstmt.executeQuery()) {
+                if (rs.next()) {
+                    return mapResultSetToTrajectory(rs);
+                }
+            }
+        } catch (SQLException e) {
+            System.err.println("[TrajectoryDAO] 获取情侣最新位置失败: " + e.getMessage());
+            e.printStackTrace();
+        }
+        
+        return null;
+    }
+    
+    /**
      * 将ResultSet映射为Trajectory对象
      */
     private Trajectory mapResultSetToTrajectory(ResultSet rs) throws SQLException {

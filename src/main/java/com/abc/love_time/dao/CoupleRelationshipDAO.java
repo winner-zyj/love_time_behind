@@ -113,11 +113,21 @@ public class CoupleRelationshipDAO {
      * @return 更新成功返回true
      */
     public boolean updateStatus(Long id, String status) {
-        String sql = "UPDATE couple_relationships SET status = ?, " + 
-                    (status.equals("active") ? "confirmed_at = NOW(), " : "") +
-                    (status.equals("rejected") ? "rejected_at = NOW(), " : "") +
-                    (status.equals("broken") ? "broken_at = NOW(), " : "") +
-                    "updated_at = NOW() WHERE id = ?";
+        // 构建SQL语句，根据状态决定是否更新confirmed_at字段
+        StringBuilder sqlBuilder = new StringBuilder("UPDATE couple_relationships SET status = ?");
+        
+        // 如果状态变为active，同时更新confirmed_at字段
+        if ("active".equals(status)) {
+            sqlBuilder.append(", confirmed_at = NOW()");
+        } else if ("rejected".equals(status)) {
+            sqlBuilder.append(", rejected_at = NOW()");
+        } else if ("broken".equals(status)) {
+            sqlBuilder.append(", broken_at = NOW()");
+        }
+        
+        sqlBuilder.append(", updated_at = NOW() WHERE id = ?");
+        
+        String sql = sqlBuilder.toString();
         
         try (Connection conn = DBUtil.getConnection();
              PreparedStatement pstmt = conn.prepareStatement(sql)) {

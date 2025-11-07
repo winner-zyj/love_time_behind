@@ -13,6 +13,9 @@ public class FutureLetterRequest {
     private String scheduledTime; // HH:MM:SS格式
     private String status; // DRAFT, SCHEDULED, SENT, READ, CANCELLED
     private String backgroundImage;
+    private Double backgroundOpacity; // 背景图片透明度 (0.0-1.0)
+    private Integer backgroundWidth;  // 背景图片宽度
+    private Integer backgroundHeight; // 背景图片高度
 
     // 构造函数
     public FutureLetterRequest() {}
@@ -90,6 +93,30 @@ public class FutureLetterRequest {
         this.backgroundImage = backgroundImage;
     }
 
+    public Double getBackgroundOpacity() {
+        return backgroundOpacity;
+    }
+
+    public void setBackgroundOpacity(Double backgroundOpacity) {
+        this.backgroundOpacity = backgroundOpacity;
+    }
+
+    public Integer getBackgroundWidth() {
+        return backgroundWidth;
+    }
+
+    public void setBackgroundWidth(Integer backgroundWidth) {
+        this.backgroundWidth = backgroundWidth;
+    }
+
+    public Integer getBackgroundHeight() {
+        return backgroundHeight;
+    }
+
+    public void setBackgroundHeight(Integer backgroundHeight) {
+        this.backgroundHeight = backgroundHeight;
+    }
+
     @Override
     public String toString() {
         return "FutureLetterRequest{" +
@@ -102,6 +129,9 @@ public class FutureLetterRequest {
                 ", scheduledTime='" + scheduledTime + '\'' +
                 ", status='" + status + '\'' +
                 ", backgroundImage='" + backgroundImage + '\'' +
+                ", backgroundOpacity=" + backgroundOpacity +
+                ", backgroundWidth=" + backgroundWidth +
+                ", backgroundHeight=" + backgroundHeight +
                 '}';
     }
 }

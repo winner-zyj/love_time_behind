@@ -2,9 +2,6 @@ package com.abc.love_time.entity;
 
 import java.sql.Timestamp;
 
-/**
- * 心形墙项目实体类
- */
 public class HeartWallProject {
     private Long id;
     private Long userId;
@@ -20,6 +17,9 @@ public class HeartWallProject {
     // 非数据库字段，用于传输用户信息
     private String userNickName;
     private String userAvatarUrl;
+    
+    // 非数据库字段，用于标识项目是否属于情侣共享
+    private Boolean isPartnerProject = false;
 
     public HeartWallProject() {
     }
@@ -120,6 +120,14 @@ public class HeartWallProject {
     public void setUserAvatarUrl(String userAvatarUrl) {
         this.userAvatarUrl = userAvatarUrl;
     }
+    
+    public Boolean getIsPartnerProject() {
+        return isPartnerProject;
+    }
+    
+    public void setIsPartnerProject(Boolean isPartnerProject) {
+        this.isPartnerProject = isPartnerProject;
+    }
 
     @Override
     public String toString() {
@@ -136,6 +144,7 @@ public class HeartWallProject {
                 ", updatedAt=" + updatedAt +
                 ", userNickName='" + userNickName + '\'' +
                 ", userAvatarUrl='" + userAvatarUrl + '\'' +
+                ", isPartnerProject=" + isPartnerProject +
                 '}';
     }
 }

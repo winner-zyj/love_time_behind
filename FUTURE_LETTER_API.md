@@ -16,7 +16,10 @@
   "scheduledDate": "2025-07-22",  // 预计发送日期（必填，格式：YYYY-MM-DD）
   "scheduledTime": "00:00:00",    // 预计发送时间（可选，格式：HH:MM:SS，默认为00:00:00）
   "status": "DRAFT",             // 状态：DRAFT（草稿）、SCHEDULED（已安排）
-  "backgroundImage": "https://example.com/image.jpg" // 背景图片URL（可选）
+  "backgroundImage": "https://example.com/image.jpg", // 背景图片URL（可选）
+  "backgroundOpacity": 0.8,      // 背景图片透明度 (0.0-1.0，默认为1.0)
+  "backgroundWidth": 300,        // 背景图片宽度（默认为300）
+  "backgroundHeight": 400        // 背景图片高度（默认为400）
 }
 ```
 
@@ -36,7 +39,11 @@
     "scheduledTime": "00:00:00",
     "status": "DRAFT",
     "createdAt": "2023-07-22T10:00:00.000+00:00",
-    "updatedAt": "2023-07-22T10:00:00.000+00:00"
+    "updatedAt": "2023-07-22T10:00:00.000+00:00",
+    "backgroundImage": "https://example.com/image.jpg",
+    "backgroundOpacity": 0.8,
+    "backgroundWidth": 300,
+    "backgroundHeight": 400
   }
 }
 ```
@@ -64,7 +71,11 @@
       "scheduledTime": "00:00:00",
       "status": "SCHEDULED",
       "createdAt": "2023-07-22T10:00:00.000+00:00",
-      "updatedAt": "2023-07-22T10:00:00.000+00:00"
+      "updatedAt": "2023-07-22T10:00:00.000+00:00",
+      "backgroundImage": "https://example.com/image.jpg",
+      "backgroundOpacity": 0.8,
+      "backgroundWidth": 300,
+      "backgroundHeight": 400
     }
   ]
 }
@@ -91,7 +102,11 @@
       "status": "SENT",
       "sentAt": "2025-07-22T00:00:00.000+00:00",
       "createdAt": "2023-07-22T10:00:00.000+00:00",
-      "updatedAt": "2025-07-22T00:00:00.000+00:00"
+      "updatedAt": "2025-07-22T00:00:00.000+00:00",
+      "backgroundImage": "https://example.com/image.jpg",
+      "backgroundOpacity": 0.8,
+      "backgroundWidth": 300,
+      "backgroundHeight": 400
     }
   ]
 }
@@ -118,7 +133,11 @@
       "status": "SENT",
       "sentAt": "2025-07-22T00:00:00.000+00:00",
       "createdAt": "2023-07-22T10:00:00.000+00:00",
-      "updatedAt": "2025-07-22T00:00:00.000+00:00"
+      "updatedAt": "2025-07-22T00:00:00.000+00:00",
+      "backgroundImage": "https://example.com/image.jpg",
+      "backgroundOpacity": 0.8,
+      "backgroundWidth": 300,
+      "backgroundHeight": 400
     }
   ]
 }
@@ -159,7 +178,13 @@
     "scheduledTime": "00:00:00",
     "status": "SCHEDULED",
     "createdAt": "2023-07-22T10:00:00.000+00:00",
-    "updatedAt": "2023-07-22T10:00:00.000+00:00"
+    "updatedAt": "2023-07-22T10:00:00.000+00:00",
+    "sentAt": "2025-07-22T00:00:00.000+00:00",
+    "readAt": null,
+    "backgroundImage": "https://example.com/image.jpg",
+    "backgroundOpacity": 0.8,
+    "backgroundWidth": 300,
+    "backgroundHeight": 400
   }
 }
 ```
@@ -193,7 +218,11 @@
     "status": "SENT",
     "sentAt": "2023-07-22T10:00:00.000+00:00",
     "createdAt": "2023-07-22T10:00:00.000+00:00",
-    "updatedAt": "2023-07-22T10:00:00.000+00:00"
+    "updatedAt": "2023-07-22T10:00:00.000+00:00",
+    "backgroundImage": "https://example.com/image.jpg",
+    "backgroundOpacity": 0.8,
+    "backgroundWidth": 300,
+    "backgroundHeight": 400
   }
 }
 ```

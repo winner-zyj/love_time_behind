@@ -100,9 +100,39 @@ curl "http://localhost:8080/lovetime/api/couple/status" \
 }
 ```
 
-### 3. 共享功能使用
+### 3. 获取相爱天数
 
-#### 3.1 甜蜜问答共享
+情侣双方可以查询彼此相爱的天数：
+
+```bash
+curl "http://localhost:8080/lovetime/api/couple/love-days" \
+  -H "Authorization: Bearer {用户token}"
+```
+
+响应示例：
+```json
+{
+  "success": true,
+  "message": "获取相爱天数成功",
+  "data": {
+    "loveDays": 150,
+    "anniversaryDate": "2025-06-10",
+    "relationshipName": "我的宝贝"
+  }
+}
+```
+
+错误响应示例：
+```json
+{
+  "success": false,
+  "message": "未找到情侣关系"
+}
+```
+
+### 4. 共享功能使用
+
+#### 4.1 甜蜜问答共享
 当情侣双方回答相同问题时，系统会自动显示对方的答案：
 
 ```bash
@@ -137,7 +167,7 @@ curl -X POST "http://localhost:8080/lovetime/api/qna/submit" \
 }
 ```
 
-#### 3.2 一百事挑战共享
+#### 4.2 一百事挑战共享
 情侣双方可以查看对方的任务完成情况：
 
 ```bash
@@ -152,7 +182,7 @@ curl "http://localhost:8080/lovetime/api/challenge/tasks" \
   -H "Authorization: Bearer {用户B的token}"
 ```
 
-#### 3.3 心形墙共享
+#### 4.3 心形墙共享
 情侣双方可以共同管理一个心形墙项目：
 
 ```bash
@@ -173,7 +203,7 @@ curl "http://localhost:8080/lovetime/api/heart-wall/projects/1?action=photos" \
   -H "Authorization: Bearer {用户A的token}"
 ```
 
-### 4. 解绑关系
+### 5. 解绑关系
 
 当情侣关系需要解除时，任何一方都可以发起解绑：
 

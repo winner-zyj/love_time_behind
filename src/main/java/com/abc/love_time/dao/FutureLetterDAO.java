@@ -23,7 +23,7 @@ public class FutureLetterDAO {
             letter.setDeliveryMethod("PARTNER"); // 默认设置为PARTNER
         }
         
-        String sql = "INSERT INTO future_letter (sender_id, receiver_id, title, content, delivery_method, scheduled_date, scheduled_time, status, background_image) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)";
+        String sql = "INSERT INTO future_letter (sender_id, receiver_id, title, content, delivery_method, scheduled_date, scheduled_time, status, background_image, background_opacity, background_width, background_height) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
         
         try (Connection conn = DBUtil.getConnection();
              PreparedStatement pstmt = conn.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS)) {
@@ -37,6 +37,9 @@ public class FutureLetterDAO {
             pstmt.setTime(7, letter.getScheduledTime());
             pstmt.setString(8, letter.getStatus());
             pstmt.setString(9, letter.getBackgroundImage());
+            pstmt.setObject(10, letter.getBackgroundOpacity(), Types.DECIMAL);
+            pstmt.setObject(11, letter.getBackgroundWidth(), Types.INTEGER);
+            pstmt.setObject(12, letter.getBackgroundHeight(), Types.INTEGER);
             
             int affectedRows = pstmt.executeUpdate();
             
@@ -216,7 +219,7 @@ public class FutureLetterDAO {
             letter.setDeliveryMethod("PARTNER"); // 默认设置为PARTNER
         }
         
-        String sql = "UPDATE future_letter SET receiver_id = ?, title = ?, content = ?, delivery_method = ?, scheduled_date = ?, scheduled_time = ?, status = ?, background_image = ? WHERE id = ?";
+        String sql = "UPDATE future_letter SET receiver_id = ?, title = ?, content = ?, delivery_method = ?, scheduled_date = ?, scheduled_time = ?, status = ?, background_image = ?, background_opacity = ?, background_width = ?, background_height = ? WHERE id = ?";
         
         try (Connection conn = DBUtil.getConnection();
              PreparedStatement pstmt = conn.prepareStatement(sql)) {
@@ -229,7 +232,10 @@ public class FutureLetterDAO {
             pstmt.setTime(6, letter.getScheduledTime());
             pstmt.setString(7, letter.getStatus());
             pstmt.setString(8, letter.getBackgroundImage());
-            pstmt.setLong(9, letter.getId());
+            pstmt.setObject(9, letter.getBackgroundOpacity(), Types.DECIMAL);
+            pstmt.setObject(10, letter.getBackgroundWidth(), Types.INTEGER);
+            pstmt.setObject(11, letter.getBackgroundHeight(), Types.INTEGER);
+            pstmt.setLong(12, letter.getId());
             
             int affectedRows = pstmt.executeUpdate();
             System.out.println("[FutureLetterDAO] 更新未来情书，影响行数: " + affectedRows);
@@ -353,6 +359,9 @@ public class FutureLetterDAO {
         letter.setSentAt(rs.getTimestamp("sent_at"));
         letter.setReadAt(rs.getTimestamp("read_at"));
         letter.setBackgroundImage(rs.getString("background_image"));
+        letter.setBackgroundOpacity(rs.getObject("background_opacity", Double.class));
+        letter.setBackgroundWidth(rs.getObject("background_width", Integer.class));
+        letter.setBackgroundHeight(rs.getObject("background_height", Integer.class));
         letter.setIsDeleted(rs.getBoolean("is_deleted"));
         letter.setDeletedAt(rs.getTimestamp("deleted_at"));
         return letter;

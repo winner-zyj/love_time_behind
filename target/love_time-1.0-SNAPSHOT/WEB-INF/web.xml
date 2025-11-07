@@ -29,4 +29,19 @@
         <servlet-name>FutureLetterServlet</servlet-name>
         <url-pattern>/api/future-letter/*</url-pattern>
     </servlet-mapping>
+    
+    <servlet>
+        <servlet-name>TrajectoryServlet</servlet-name>
+        <servlet-class>com.abc.love_time.servlet.TrajectoryServlet</servlet-class>
+    </servlet>
+    <servlet-mapping>
+        <servlet-name>TrajectoryServlet</servlet-name>
+        <url-pattern>/api/trajectory/*</url-pattern>
+    </servlet-mapping>
+    
+    <!-- 配置静态资源访问 -->
+    <servlet-mapping>
+        <servlet-name>default</servlet-name>
+        <url-pattern>/uploads/*</url-pattern>
+    </servlet-mapping>
 </web-app>

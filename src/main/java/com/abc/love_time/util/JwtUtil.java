@@ -3,6 +3,10 @@ package com.abc.love_time.util;
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.SignatureAlgorithm;
 import io.jsonwebtoken.security.Keys;
+import io.jsonwebtoken.ExpiredJwtException;
+import io.jsonwebtoken.MalformedJwtException;
+import io.jsonwebtoken.UnsupportedJwtException;
+import io.jsonwebtoken.SignatureException;
 
 import javax.crypto.SecretKey;
 import java.nio.charset.StandardCharsets;
@@ -52,9 +56,21 @@ public class JwtUtil {
                     .build()
                     .parseClaimsJws(token);
             return true;
+        } catch (ExpiredJwtException e) {
+            System.err.println("JWT token已过期: " + e.getMessage());
+        } catch (MalformedJwtException e) {
+            System.err.println("JWT token格式错误: " + e.getMessage());
+        } catch (SignatureException e) {
+            System.err.println("JWT签名验证失败: " + e.getMessage());
+        } catch (UnsupportedJwtException e) {
+            System.err.println("不支持的JWT token: " + e.getMessage());
+        } catch (IllegalArgumentException e) {
+            System.err.println("JWT claims字符串为空: " + e.getMessage());
         } catch (Exception e) {
-            return false;
+            System.err.println("JWT token验证异常: " + e.getMessage());
+            e.printStackTrace();
         }
+        return false;
     }
 
     /**
@@ -63,11 +79,17 @@ public class JwtUtil {
      * @return openid
      */
     public static String getOpenidFromToken(String token) {
-        return Jwts.parserBuilder()
-                .setSigningKey(SECRET_KEY)
-                .build()
-                .parseClaimsJws(token)
-                .getBody()
-                .get("openid", String.class);
+        try {
+            return Jwts.parserBuilder()
+                    .setSigningKey(SECRET_KEY)
+                    .build()
+                    .parseClaimsJws(token)
+                    .getBody()
+                    .get("openid", String.class);
+        } catch (Exception e) {
+            System.err.println("从token中提取openid失败: " + e.getMessage());
+            e.printStackTrace();
+            return null;
+        }
     }
 }
