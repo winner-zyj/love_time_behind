@@ -438,7 +438,8 @@ public class ChallengeServlet extends HttpServlet {
      */
     private Long getUserIdByCode(String userCode) {
         try {
-            User user = userDAO.findByCode(userCode);
+            // 使用findByOpenId而不是findByCode，因为userCode实际上是openid
+            User user = userDAO.findByOpenId(userCode);
             if (user != null) {
                 return user.getId();
             }
