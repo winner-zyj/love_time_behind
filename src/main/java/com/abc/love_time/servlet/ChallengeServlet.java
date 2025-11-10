@@ -11,15 +11,22 @@ import com.google.gson.Gson;
 import com.google.gson.JsonObject;
 
 import jakarta.servlet.annotation.WebServlet;
+import jakarta.servlet.annotation.MultipartConfig;
 import jakarta.servlet.http.HttpServlet;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
+import jakarta.servlet.http.Part;
 
+import java.io.File;
 import java.io.IOException;
 import java.io.PrintWriter;
+import java.nio.file.Files;
+import java.nio.file.Paths;
+import java.nio.file.StandardCopyOption;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.UUID;
 
 /**
  * 一百事挑战接口
@@ -29,13 +36,22 @@ import java.util.Map;
  * POST /api/challenge/task/delete     - 删除自定义任务
  * POST /api/challenge/complete        - 标记任务完成/取消完成
  * POST /api/challenge/favorite        - 收藏/取消收藏任务
+ * POST /api/challenge/upload          - 上传照片
  */
 @WebServlet(name = "challengeServlet", value = "/api/challenge/*")
+@MultipartConfig(
+    fileSizeThreshold = 1024 * 1024 * 2,  // 2MB
+    maxFileSize = 1024 * 1024 * 10,       // 10MB
+    maxRequestSize = 1024 * 1024 * 50     // 50MB
+)
 public class ChallengeServlet extends HttpServlet {
     private final Gson gson = new Gson();
     private final ChallengeDAO challengeDAO = new ChallengeDAO();
     private final UserDAO userDAO = new UserDAO();
     private final CoupleRelationshipDAO coupleDAO = new CoupleRelationshipDAO(); // 添加情侣关系DAO
+    
+    // 一百件事照片存储目录（相对于webapp根目录）
+    private static final String UPLOAD_DIR = "uploads/challenge";
 
     @Override
     protected void doGet(HttpServletRequest request, HttpServletResponse response) throws IOException {
@@ -118,6 +134,9 @@ public class ChallengeServlet extends HttpServlet {
             } else if (pathInfo != null && pathInfo.equals("/favorite")) {
                 // 收藏/取消收藏任务
                 handleFavoriteTask(request, response, out, userId);
+            } else if (pathInfo != null && pathInfo.equals("/upload")) {
+                // 上传照片
+                handleUploadPhoto(request, response, out, userId);
             } else {
                 sendError(response, out, "无效的请求路径", HttpServletResponse.SC_NOT_FOUND);
             }
@@ -395,6 +414,108 @@ public class ChallengeServlet extends HttpServlet {
             e.printStackTrace();
             sendError(response, out, "更新任务收藏状态失败: " + e.getMessage(), HttpServletResponse.SC_INTERNAL_SERVER_ERROR);
         }
+    }
+
+    /**
+     * 处理上传照片
+     */
+    private void handleUploadPhoto(HttpServletRequest request, HttpServletResponse response, PrintWriter out, Long userId) {
+        try {
+            // 获取上传的文件
+            Part filePart = request.getPart("file");
+            if (filePart == null) {
+                sendError(response, out, "未找到上传的文件", HttpServletResponse.SC_BAD_REQUEST);
+                return;
+            }
+            
+            // 获取原始文件名
+            String fileName = getFileName(filePart);
+            if (fileName == null || fileName.isEmpty()) {
+                sendError(response, out, "文件名无效", HttpServletResponse.SC_BAD_REQUEST);
+                return;
+            }
+            
+            // 验证文件类型
+            String contentType = filePart.getContentType();
+            if (!isValidImageType(contentType)) {
+                sendError(response, out, "仅支持图片格式（jpg, jpeg, png, gif）", HttpServletResponse.SC_BAD_REQUEST);
+                return;
+            }
+            
+            // 生成唯一文件名
+            String fileExtension = getFileExtension(fileName);
+            String newFileName = UUID.randomUUID().toString() + fileExtension;
+            
+            // 获取上传目录的绝对路径
+            String uploadPath = getServletContext().getRealPath("") + File.separator + UPLOAD_DIR;
+            File uploadDir = new File(uploadPath);
+            if (!uploadDir.exists()) {
+                uploadDir.mkdirs();
+            }
+            
+            // 保存文件
+            String filePath = uploadPath + File.separator + newFileName;
+            Files.copy(filePart.getInputStream(), Paths.get(filePath), StandardCopyOption.REPLACE_EXISTING);
+            
+            // 生成访问URL
+            String photoUrl = request.getScheme() + "://" + 
+                             request.getServerName() + ":" + 
+                             request.getServerPort() + 
+                             request.getContextPath() + "/" + 
+                             UPLOAD_DIR + "/" + newFileName;
+            
+            Map<String, Object> result = new HashMap<>();
+            result.put("success", true);
+            result.put("message", "照片上传成功");
+            result.put("photoUrl", photoUrl);
+            
+            response.setStatus(HttpServletResponse.SC_OK);
+            out.print(gson.toJson(result));
+            
+            System.out.println("[ChallengeServlet] 用户 " + userId + " 上传照片成功: " + photoUrl);
+        } catch (Exception e) {
+            System.err.println("[ChallengeServlet] 上传照片失败: " + e.getMessage());
+            e.printStackTrace();
+            sendError(response, out, "上传照片失败: " + e.getMessage(), HttpServletResponse.SC_INTERNAL_SERVER_ERROR);
+        }
+    }
+    
+    /**
+     * 获取上传文件的文件名
+     */
+    private String getFileName(Part part) {
+        String contentDisposition = part.getHeader("content-disposition");
+        if (contentDisposition == null) return null;
+        
+        for (String content : contentDisposition.split(";")) {
+            if (content.trim().startsWith("filename")) {
+                return content.substring(content.indexOf('=') + 1).trim().replace("\"", "");
+            }
+        }
+        return null;
+    }
+    
+    /**
+     * 获取文件扩展名
+     */
+    private String getFileExtension(String fileName) {
+        int lastIndexOf = fileName.lastIndexOf(".");
+        if (lastIndexOf == -1) {
+            return "";
+        }
+        return fileName.substring(lastIndexOf);
+    }
+    
+    /**
+     * 验证是否为有效的图片类型
+     */
+    private boolean isValidImageType(String contentType) {
+        return contentType != null && (
+            contentType.equals("image/jpeg") ||
+            contentType.equals("image/jpg") ||
+            contentType.equals("image/png") ||
+            contentType.equals("image/gif")
+        );
     }
 
     /**
