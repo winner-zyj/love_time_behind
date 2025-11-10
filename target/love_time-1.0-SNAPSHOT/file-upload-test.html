@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>File Upload Test</title>
+    <meta charset="UTF-8">
+</head>
+<body>
+    <h2>文件上传测试</h2>
+    <form action="api/test/upload" method="post" enctype="multipart/form-data">
+        <label for="file">选择文件:</label>
+        <input type="file" id="file" name="file" accept="image/*" required><br><br>
+        <input type="submit" value="上传文件">
+    </form>
+    
+    <div id="result"></div>
+    
+    <script>
+        document.querySelector('form').addEventListener('submit', function(e) {
+            e.preventDefault();
+            
+            const formData = new FormData(this);
+            
+            fetch('api/test/upload', {
+                method: 'POST',
+                body: formData
+            })
+            .then(response => response.json())
+            .then(data => {
+                const resultDiv = document.getElementById('result');
+                if (data.success) {
+                    resultDiv.innerHTML = '<p style="color: green;">' + data.message + '</p>' +
+                                         '<p>文件URL: ' + data.fileUrl + '</p>' +
+                                         '<img src="' + data.fileUrl + '" style="max-width: 300px;">';
+                } else {
+                    resultDiv.innerHTML = '<p style="color: red;">' + data.message + '</p>';
+                }
+            })
+            .catch(error => {
+                document.getElementById('result').innerHTML = '<p style="color: red;">请求失败: ' + error + '</p>';
+            });
+        });
+    </script>
+</body>
+</html>

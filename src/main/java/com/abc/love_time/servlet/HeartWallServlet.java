@@ -27,6 +27,8 @@ import java.nio.file.Paths;
 import java.nio.file.StandardCopyOption;
 import java.sql.SQLException;
 import java.util.List;
+import java.util.Map;
+import java.util.HashMap;
 import java.util.UUID;
 
 @MultipartConfig(
@@ -454,12 +456,20 @@ public class HeartWallServlet extends HttpServlet {
         String filePath = uploadPath + File.separator + newFileName;
         Files.copy(filePart.getInputStream(), Paths.get(filePath), StandardCopyOption.REPLACE_EXISTING);
         
-        // 生成访问URL
-        String photoUrl = request.getScheme() + "://" + 
+        // 生成相对路径（只存储相对路径到数据库）
+        String relativePath = UPLOAD_DIR + "/" + newFileName;
+        
+        // 生成完整URL用于返回给前端
+        String fullUrl = request.getScheme() + "://" + 
                          request.getServerName() + ":" + 
                          request.getServerPort() + 
                          request.getContextPath() + "/" + 
-                         UPLOAD_DIR + "/" + newFileName;
+                         relativePath;
+        
+        // 打印调试信息
+        System.out.println("[HeartWallServlet] 上传文件路径: " + filePath);
+        System.out.println("[HeartWallServlet] 存储到数据库的相对路径: " + relativePath);
+        System.out.println("[HeartWallServlet] 返回给前端的完整URL: " + fullUrl);
         
         // 获取照片说明（可选）
         String caption = request.getParameter("caption");
@@ -478,22 +488,35 @@ public class HeartWallServlet extends HttpServlet {
         HeartWallPhoto photo = new HeartWallPhoto();
         photo.setProjectId(projectId);
         photo.setUserId(userId);
-        photo.setPhotoUrl(photoUrl);
+        photo.setPhotoUrl(relativePath);  // 数据库中存储相对路径
+        photo.setThumbnailUrl(relativePath);  // 缩略图URL暂时与原图相同
         photo.setPositionIndex(positionIndex);
         photo.setCaption(caption);
         photo.setTakenDate(takenDate);
         
         try {
             photo = photoDAO.insert(photo);
-            // 成功时返回200状态码而不是201
+            
+            // 设置返回给前端的完整URL
+            photo.setPhotoUrl(fullUrl);
+            photo.setThumbnailUrl(fullUrl);
+            
+            // 成功时返回200状态码
             response.setStatus(HttpServletResponse.SC_OK);
-            HeartWallResponse successResponse = HeartWallResponse.success("照片上传成功", photo);
-            response.getWriter().write(gson.toJson(successResponse));
+            
+            // 构造符合前端要求的响应格式
+            Map<String, Object> result = new HashMap<>();
+            result.put("success", true);
+            result.put("data", createPhotoDataMap(photo));
+            
+            response.getWriter().write(gson.toJson(result));
         } catch (SQLException e) {
             // 出现异常时返回500状态码
             response.setStatus(HttpServletResponse.SC_INTERNAL_SERVER_ERROR);
-            HeartWallResponse errorResponse = HeartWallResponse.error("服务器内部错误: " + e.getMessage());
-            response.getWriter().write(gson.toJson(errorResponse));
+            Map<String, Object> errorResult = new HashMap<>();
+            errorResult.put("success", false);
+            errorResult.put("message", "服务器内部错误: " + e.getMessage());
+            response.getWriter().write(gson.toJson(errorResult));
         }
     }
     
@@ -653,12 +676,25 @@ public class HeartWallServlet extends HttpServlet {
         
         List<HeartWallPhoto> photos = photoDAO.findByProjectIdWithLimit(projectId, offset, pageSize);
         
-        // 获取照片的用户信息
+        // 获取照片的用户信息，并将相对路径转换为完整URL
         for (HeartWallPhoto photo : photos) {
             User user = userDAO.findById(photo.getUserId());
             if (user != null) {
                 photo.setUserNickName(user.getNickName());
                 photo.setUserAvatarUrl(user.getAvatarUrl());
+            }
+            
+            // 如果photoUrl是相对路径，转换为完整URL
+            String photoUrl = photo.getPhotoUrl();
+            if (photoUrl != null && !photoUrl.startsWith("http")) {
+                // 将相对路径转换为完整URL
+                String fullUrl = request.getScheme() + "://" + 
+                               request.getServerName() + ":" + 
+                               request.getServerPort() + 
+                               request.getContextPath() + "/" + 
+                               photoUrl;
+                photo.setPhotoUrl(fullUrl);
+                System.out.println("[HeartWallServlet] 转换照片URL: " + photoUrl + " -> " + fullUrl);
             }
         }
         
@@ -766,8 +802,10 @@ public class HeartWallServlet extends HttpServlet {
         
         if (existingPhoto == null) {
             response.setStatus(HttpServletResponse.SC_NOT_FOUND);
-            HeartWallResponse errorResponse = HeartWallResponse.error("指定的照片不存在");
-            response.getWriter().write(gson.toJson(errorResponse));
+            Map<String, Object> errorResult = new HashMap<>();
+            errorResult.put("success", false);
+            errorResult.put("message", "指定的照片不存在");
+            response.getWriter().write(gson.toJson(errorResult));
             return;
         }
         
@@ -775,8 +813,10 @@ public class HeartWallServlet extends HttpServlet {
         HeartWallProject project = projectDAO.findById(existingPhoto.getProjectId());
         if (project == null || !hasPermissionForProject(project, userId)) {
             response.setStatus(HttpServletResponse.SC_FORBIDDEN);
-            HeartWallResponse errorResponse = HeartWallResponse.error("您没有权限修改此照片");
-            response.getWriter().write(gson.toJson(errorResponse));
+            Map<String, Object> errorResult = new HashMap<>();
+            errorResult.put("success", false);
+            errorResult.put("message", "您没有权限修改此照片");
+            response.getWriter().write(gson.toJson(errorResult));
             return;
         }
         
@@ -794,8 +834,10 @@ public class HeartWallServlet extends HttpServlet {
             // 检查位置是否在有效范围内
             if (photoRequest.getPositionIndex() < 1 || photoRequest.getPositionIndex() > project.getMaxPhotos()) {
                 response.setStatus(HttpServletResponse.SC_BAD_REQUEST);
-                HeartWallResponse errorResponse = HeartWallResponse.error("位置索引超出有效范围");
-                response.getWriter().write(gson.toJson(errorResponse));
+                Map<String, Object> errorResult = new HashMap<>();
+                errorResult.put("success", false);
+                errorResult.put("message", "位置索引超出有效范围");
+                response.getWriter().write(gson.toJson(errorResult));
                 return;
             }
             existingPhoto.setPositionIndex(photoRequest.getPositionIndex());
@@ -812,12 +854,40 @@ public class HeartWallServlet extends HttpServlet {
         boolean updated = photoDAO.update(existingPhoto);
         
         if (updated) {
-            HeartWallResponse successResponse = HeartWallResponse.success("照片更新成功", existingPhoto);
-            response.getWriter().write(gson.toJson(successResponse));
+            // 如果photoUrl是相对路径，转换为完整URL
+            String photoUrl = existingPhoto.getPhotoUrl();
+            if (photoUrl != null && !photoUrl.startsWith("http")) {
+                // 将相对路径转换为完整URL
+                String fullUrl = request.getScheme() + "://" + 
+                               request.getServerName() + ":" + 
+                               request.getServerPort() + 
+                               request.getContextPath() + "/" + 
+                               photoUrl;
+                existingPhoto.setPhotoUrl(fullUrl);
+            }
+            
+            // 如果thumbnailUrl是相对路径，转换为完整URL
+            String thumbnailUrl = existingPhoto.getThumbnailUrl();
+            if (thumbnailUrl != null && !thumbnailUrl.startsWith("http")) {
+                // 将相对路径转换为完整URL
+                String fullUrl = request.getScheme() + "://" + 
+                               request.getServerName() + ":" + 
+                               request.getServerPort() + 
+                               request.getContextPath() + "/" + 
+                               thumbnailUrl;
+                existingPhoto.setThumbnailUrl(fullUrl);
+            }
+            
+            Map<String, Object> result = new HashMap<>();
+            result.put("success", true);
+            result.put("data", createPhotoDataMap(existingPhoto));
+            response.getWriter().write(gson.toJson(result));
         } else {
             response.setStatus(HttpServletResponse.SC_INTERNAL_SERVER_ERROR);
-            HeartWallResponse errorResponse = HeartWallResponse.error("更新失败");
-            response.getWriter().write(gson.toJson(errorResponse));
+            Map<String, Object> errorResult = new HashMap<>();
+            errorResult.put("success", false);
+            errorResult.put("message", "更新失败");
+            response.getWriter().write(gson.toJson(errorResult));
         }
     }
     
@@ -897,8 +967,10 @@ public class HeartWallServlet extends HttpServlet {
         String projectIdStr = request.getParameter("projectId");
         if (projectIdStr == null) {
             response.setStatus(HttpServletResponse.SC_BAD_REQUEST);
-            HeartWallResponse errorResponse = HeartWallResponse.error("projectId参数不能为空");
-            response.getWriter().write(gson.toJson(errorResponse));
+            Map<String, Object> errorResult = new HashMap<>();
+            errorResult.put("success", false);
+            errorResult.put("message", "projectId参数不能为空");
+            response.getWriter().write(gson.toJson(errorResult));
             return;
         }
         
@@ -908,16 +980,20 @@ public class HeartWallServlet extends HttpServlet {
         HeartWallProject project = projectDAO.findById(projectId);
         if (project == null) {
             response.setStatus(HttpServletResponse.SC_NOT_FOUND);
-            HeartWallResponse errorResponse = HeartWallResponse.error("指定的心形墙项目不存在");
-            response.getWriter().write(gson.toJson(errorResponse));
+            Map<String, Object> errorResult = new HashMap<>();
+            errorResult.put("success", false);
+            errorResult.put("message", "指定的心形墙项目不存在");
+            response.getWriter().write(gson.toJson(errorResult));
             return;
         }
         
         // 检查用户是否有权限清空此项目（自己创建的）
         if (!project.getUserId().equals(userId)) {
             response.setStatus(HttpServletResponse.SC_FORBIDDEN);
-            HeartWallResponse errorResponse = HeartWallResponse.error("您没有权限清空此项目");
-            response.getWriter().write(gson.toJson(errorResponse));
+            Map<String, Object> errorResult = new HashMap<>();
+            errorResult.put("success", false);
+            errorResult.put("message", "您没有权限清空此项目");
+            response.getWriter().write(gson.toJson(errorResult));
             return;
         }
         
@@ -925,12 +1001,15 @@ public class HeartWallServlet extends HttpServlet {
         boolean cleared = projectDAO.clearAllPhotos(projectId);
         
         if (cleared) {
-            HeartWallResponse successResponse = HeartWallResponse.success("项目照片已清空");
-            response.getWriter().write(gson.toJson(successResponse));
+            Map<String, Object> result = new HashMap<>();
+            result.put("success", true);
+            response.getWriter().write(gson.toJson(result));
         } else {
             response.setStatus(HttpServletResponse.SC_INTERNAL_SERVER_ERROR);
-            HeartWallResponse errorResponse = HeartWallResponse.error("清空照片失败");
-            response.getWriter().write(gson.toJson(errorResponse));
+            Map<String, Object> errorResult = new HashMap<>();
+            errorResult.put("success", false);
+            errorResult.put("message", "清空照片失败");
+            response.getWriter().write(gson.toJson(errorResult));
         }
     }
     
@@ -988,6 +1067,22 @@ public class HeartWallServlet extends HttpServlet {
         }
         
         return false;
+    }
+    
+    /**
+     * 创建符合前端要求的照片数据映射
+     */
+    private Map<String, Object> createPhotoDataMap(HeartWallPhoto photo) {
+        Map<String, Object> data = new HashMap<>();
+        data.put("id", photo.getId());
+        data.put("photoId", photo.getId());
+        data.put("projectId", photo.getProjectId());
+        data.put("positionIndex", photo.getPositionIndex());
+        data.put("photoUrl", photo.getPhotoUrl());
+        data.put("thumbnailUrl", photo.getThumbnailUrl());
+        data.put("caption", photo.getCaption());
+        data.put("takenDate", photo.getTakenDate());
+        return data;
     }
     
     /**

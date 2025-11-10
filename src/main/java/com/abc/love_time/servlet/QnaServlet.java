@@ -495,12 +495,22 @@ public class QnaServlet extends HttpServlet {
      */
     private Long getUserIdByCode(String userCode) {
         try {
-            User user = userDAO.findByCode(userCode);
+            // 首先尝试使用openid查找用户
+            User user = userDAO.findByOpenId(userCode);
             if (user != null) {
                 return user.getId();
             }
+            
+            // 如果使用openid找不到，再尝试使用code查找用户
+            user = userDAO.findByCode(userCode);
+            if (user != null) {
+                return user.getId();
+            }
+            
+            System.err.println("[QnaServlet] 无法找到用户，userCode: " + userCode);
         } catch (Exception e) {
             System.err.println("[QnaServlet] 获取用户ID失败: " + e.getMessage());
+            e.printStackTrace();
         }
         return null;
     }
