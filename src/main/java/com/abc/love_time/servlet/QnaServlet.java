@@ -28,6 +28,7 @@ import java.util.Map;
  * GET  /api/qna/current   - 获取当前问题
  * POST /api/qna/submit    - 提交答案（提交后返回情侣答案）
  * GET  /api/qna/history   - 获取历史答案
+ * GET  /api/qna/partner   - 获取情侣答案
  * POST /api/qna/question/add - 添加自定义问题
  */
 @WebServlet(name = "qnaServlet", value = "/api/qna/*")
@@ -338,6 +339,66 @@ public class QnaServlet extends HttpServlet {
             System.err.println("[QnaServlet] 获取历史答案失败: " + e.getMessage());
             e.printStackTrace();
             sendError(response, out, "获取历史答案失败: " + e.getMessage(), HttpServletResponse.SC_INTERNAL_SERVER_ERROR);
+        }
+    }
+
+    /**
+     * 获取情侣答案
+     */
+    private void handleGetPartnerAnswer(HttpServletRequest request, HttpServletResponse response, PrintWriter out, Long userId) {
+        try {
+            // 检查用户是否有情侣
+            Long partnerId = coupleDAO.getPartnerId(userId);
+            if (partnerId == null) {
+                sendError(response, out, "您还没有情侣，无法获取对方答案", HttpServletResponse.SC_BAD_REQUEST);
+                return;
+            }
+            
+            // 获取问题ID参数
+            String questionIdStr = request.getParameter("questionId");
+            if (questionIdStr == null || questionIdStr.isEmpty()) {
+                sendError(response, out, "问题ID不能为空", HttpServletResponse.SC_BAD_REQUEST);
+                return;
+            }
+            
+            Long questionId;
+            try {
+                questionId = Long.parseLong(questionIdStr);
+            } catch (NumberFormatException e) {
+                sendError(response, out, "问题ID格式不正确", HttpServletResponse.SC_BAD_REQUEST);
+                return;
+            }
+            
+            // 检查问题是否存在
+            Question question = questionDAO.findById(questionId);
+            if (question == null) {
+                sendError(response, out, "问题不存在", HttpServletResponse.SC_NOT_FOUND);
+                return;
+            }
+            
+            // 获取情侣的答案
+            Answer partnerAnswer = answerDAO.findByUserAndQuestion(partnerId, questionId);
+            
+            Map<String, Object> result = new HashMap<>();
+            result.put("success", true);
+            result.put("message", "获取成功");
+            
+            if (partnerAnswer != null) {
+                result.put("hasAnswer", true);
+                result.put("answer", partnerAnswer.getAnswerText());
+                result.put("answeredAt", partnerAnswer.getAnsweredAt());
+            } else {
+                result.put("hasAnswer", false);
+                result.put("answer", null);
+            }
+            
+            response.setStatus(HttpServletResponse.SC_OK);
+            out.print(gson.toJson(result));
+            
+        } catch (Exception e) {
+            System.err.println("[QnaServlet] 获取情侣答案失败: " + e.getMessage());
+            e.printStackTrace();
+            sendError(response, out, "获取情侣答案失败: " + e.getMessage(), HttpServletResponse.SC_INTERNAL_SERVER_ERROR);
         }
     }
 
