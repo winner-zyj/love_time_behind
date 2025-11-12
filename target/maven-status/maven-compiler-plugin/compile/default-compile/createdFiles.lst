@@ -19,7 +19,6 @@ com\abc\love_time\dto\WeChatLoginResponse$LoginData.class
 com\abc\love_time\servlet\HttpUrlTestServlet.class
 com\abc\love_time\dto\TrajectoryRequest.class
 com\abc\love_time\dto\HeartWallResponse.class
-com\abc\love_time\util\FutureLetterScheduler.class
 com\abc\love_time\dao\ChallengeDAO.class
 com\abc\love_time\dto\HeartWallPhotoRequest.class
 com\abc\love_time\servlet\FutureLetterServlet.class
@@ -39,8 +38,6 @@ com\abc\love_time\dto\CoupleRequest.class
 com\abc\love_time\dto\WeChatLoginRequest.class
 com\abc\love_time\dto\QuestionListResponse.class
 com\abc\love_time\dto\FutureLetterDetailResponse.class
-com\abc\love_time\util\DBUtil.class
-com\abc\love_time\util\FileUploadTest.class
 com\abc\love_time\dao\QuestionDAO.class
 com\abc\love_time\dao\TrajectoryDAO.class
 com\abc\love_time\servlet\ChallengeServlet.class
@@ -52,16 +49,12 @@ com\abc\love_time\dao\HeartWallProjectDAO.class
 com\abc\love_time\dto\FutureLetterResponse.class
 com\abc\love_time\entity\Question.class
 com\abc\love_time\service\CoupleService.class
-com\abc\love_time\util\DatabaseTest.class
 com\abc\love_time\dto\CoupleResponse.class
 com\abc\love_time\dto\LoveDaysResponse$LoveDaysData.class
 com\abc\love_time\dto\TrajectoryResponse.class
-com\abc\love_time\util\JwtUtil.class
 com\abc\love_time\entity\ChallengeTask.class
 com\abc\love_time\dto\QuestionResponse.class
-com\abc\love_time\util\WeChatApiClient.class
 com\abc\love_time\dao\FutureLetterDAO.class
 com\abc\love_time\entity\Trajectory.class
 com\abc\love_time\entity\UserChallengeProgress.class
-com\abc\love_time\servlet\SweetQuestionServlet.class
 com\abc\love_time\servlet\UserServlet.class

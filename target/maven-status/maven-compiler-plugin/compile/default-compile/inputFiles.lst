@@ -50,13 +50,13 @@ D:\exercise\love_time_behind\src\main\java\com\abc\love_time\servlet\HeartWallSe
 D:\exercise\love_time_behind\src\main\java\com\abc\love_time\servlet\HttpUrlTestServlet.java
 D:\exercise\love_time_behind\src\main\java\com\abc\love_time\servlet\ImageAccessTestServlet.java
 D:\exercise\love_time_behind\src\main\java\com\abc\love_time\servlet\QnaServlet.java
-D:\exercise\love_time_behind\src\main\java\com\abc\love_time\servlet\SweetQuestionServlet.java
 D:\exercise\love_time_behind\src\main\java\com\abc\love_time\servlet\TestServlet.java
 D:\exercise\love_time_behind\src\main\java\com\abc\love_time\servlet\TrajectoryServlet.java
 D:\exercise\love_time_behind\src\main\java\com\abc\love_time\servlet\UploadTestServlet.java
 D:\exercise\love_time_behind\src\main\java\com\abc\love_time\servlet\UploadVerificationServlet.java
 D:\exercise\love_time_behind\src\main\java\com\abc\love_time\servlet\UserServlet.java
 D:\exercise\love_time_behind\src\main\java\com\abc\love_time\servlet\WeChatLoginServlet.java
+D:\exercise\love_time_behind\src\main\java\com\abc\love_time\util\CosUtil.java
 D:\exercise\love_time_behind\src\main\java\com\abc\love_time\util\DatabaseTest.java
 D:\exercise\love_time_behind\src\main\java\com\abc\love_time\util\DBUtil.java
 D:\exercise\love_time_behind\src\main\java\com\abc\love_time\util\FileUploadTest.java

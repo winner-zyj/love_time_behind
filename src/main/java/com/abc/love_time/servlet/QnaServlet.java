@@ -72,6 +72,9 @@ public class QnaServlet extends HttpServlet {
             } else if (pathInfo.equals("/history")) {
                 // 获取历史答案
                 handleGetHistory(request, response, out, userId);
+            } else if (pathInfo.equals("/partner")) {
+                // 获取情侣答案
+                handleGetPartnerAnswer(request, response, out, userId);
             } else {
                 sendError(response, out, "无效的请求路径", HttpServletResponse.SC_NOT_FOUND);
             }
@@ -587,4 +590,5 @@ public class QnaServlet extends HttpServlet {
         response.setStatus(statusCode);
         out.print(gson.toJson(error));
     }
+
 }
